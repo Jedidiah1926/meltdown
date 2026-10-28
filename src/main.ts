@@ -58,8 +58,8 @@ Promise.all([loadArt('gauge_face.png'), loadArt('gauge_needle.png')])
   .catch(() => console.warn('게이지 아트 없음 — 임시 그래픽 사용'));
 loadArt('desk_bg.png').then((t) => desk.useBackground(t)).catch(() => console.warn('desk_bg.png 없음 — 임시 그래픽 사용'));
 // 책상 부품: 있는 것만 적용 (SCRAM 버튼·펌프 손잡이는 잘림 문제로 아직 임시 그래픽)
-Promise.all(['rod_handle', 'valve_wheel', 'abandon_lever_up', 'abandon_lever_down'].map((n) => loadArt(`${n}.png`).catch(() => undefined)))
-  .then(([rodHandle, wheel, leverUp, leverDown]) => desk.useParts({ rodHandle, wheel, leverUp, leverDown }));
+Promise.all(['rod_handle', 'valve_wheel'].map((n) => loadArt(`${n}.png`).catch(() => undefined)))
+  .then(([rodHandle, wheel]) => desk.useParts({ rodHandle, wheel }));
 Promise.all(['off', 'amber', 'red', 'green'].map((k) => loadArt(`lamp_${k}.png`)))
   .then(([off, amber, red, green]) => wall.useLamps({ off, amber, red, green }))
   .catch(() => console.warn('경고등 아트 없음 — 임시 그래픽 사용'));
@@ -79,6 +79,7 @@ function restart() {
   supply.pendingReplace = null;
   desk.scramCoverOpen = false;
   desk.abandonPulled = { L: false, R: false };
+  desk.abandonPos = { L: 0, R: 0 };
   desk.handleRise = 0;
   desk.handlePull = 0;
   ending.hide();

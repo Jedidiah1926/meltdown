@@ -222,9 +222,9 @@ A rusty red industrial valve handwheel seen straight from the front: an outer ri
 and a round metal hub in the center. Perfectly rotationally symmetric. Transparent background.
 ```
 
-### 2-6. 포기 장치 — `abandon_lever_up.png`, `abandon_lever_down.png`, `abandon_pull_handle.png`
+### 2-6. 포기 장치 — `abandon_pull_handle.png`
 
-- 좌우 레버: 각 **20×76**, 투명 배경 (**적용됨**)
+- 좌우 레버: 제어봉 레버와 같은 손잡이(`rod_handle.png`)를 쓴다. 따로 그릴 필요 없음. (예전 `abandon_lever_up.png`·`abandon_lever_down.png`는 더 이상 쓰지 않는다)
 - **Π자 손잡이** `abandon_pull_handle.png`: **40×20**, 투명 배경. 거꾸로 뒤집은 U자 모양. 좌우 레버를 모두 내리면 SCRAM 아래 상자에서 솟아오르고, 끌어내리면 포기가 실행된다. 게임에서 위아래로 움직이므로 **가로 손잡이와 짧은 기둥 두 개만** 그린다. 기둥 아래쪽 끝은 상자 속으로 들어가는 부분이라 잘려 있어도 된다.
 - 지금은 임시 그래픽(빨간 가로 막대 + 기둥 두 개)으로 나온다.
 - **잘림 방지**: 물체 둘레에 빈 여백을 충분히 두고 생성해 달라고 요청한다. 잘라내는 것은 이쪽에서 한다.
