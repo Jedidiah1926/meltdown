@@ -17,7 +17,6 @@ function riskAngle(risk: number): number {
 
 export class Wall extends Container {
   private needle = new Graphics();
-  private limitMarker = new Graphics();
   private needleValue = 0;
   private gaugeText: Text;
   private crt = new Container();
@@ -63,7 +62,7 @@ export class Wall extends Container {
     this.addChild(ttl);
     this.gaugeText = label('', 12, 0x5a2a1a);
     this.gaugeText.position.set(40, 268);
-    this.addChild(this.limitMarker, this.needle, this.gaugeText);
+    this.addChild(this.needle, this.gaugeText);
 
     // CRT
     const bezel = new Graphics()
@@ -116,14 +115,6 @@ export class Wall extends Container {
       .moveTo(GAUGE.x, GAUGE.y)
       .lineTo(GAUGE.x + Math.cos(a) * (GAUGE.r - 6), GAUGE.y + Math.sin(a) * (GAUGE.r - 6))
       .stroke({ width: 3, color: 0x1a0808 });
-    this.limitMarker.clear();
-    if (has(g, 'coreLimit')) {
-      const m = riskAngle(g.meltPoint);
-      this.limitMarker
-        .moveTo(GAUGE.x + Math.cos(m) * (GAUGE.r - 14), GAUGE.y + Math.sin(m) * (GAUGE.r - 14))
-        .lineTo(GAUGE.x + Math.cos(m) * (GAUGE.r + 14), GAUGE.y + Math.sin(m) * (GAUGE.r + 14))
-        .stroke({ width: 4, color: 0x000000 });
-    }
     this.gaugeText.text = has(g, 'coreLimit') ? `노심 한계 ${g.meltPoint.toFixed(0)}%` : '';
 
     // CRT: 출력 파형 + 단계 선포 + 운전 일지
