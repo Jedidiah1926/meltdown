@@ -35,7 +35,7 @@ export class TitleOverlay extends Container {
       '',
       '제어봉 레버 Q/A · 냉각 펌프 W/S · 터빈 밸브 E/D · SCRAM X(두 번: 덮개 → 버튼)',
       '해결 모듈은 슬롯을 클릭해서 사용 · Space 일시정지 (일시정지 중 모듈 드래그로 재배치)',
-      '포기: 책상 양 끝 레버 두 개를 당기고 → 가운데 아래 덮개 → 버튼',
+      '포기: 책상 양 끝 레버 두 개를 당기고 → SCRAM 아래 덮개 → 버튼',
     ].join('\n'), 15, C.text, { align: 'center', lineHeight: 24 });
     help.anchor.set(0.5, 0);
     help.position.set(W / 2, 300);
