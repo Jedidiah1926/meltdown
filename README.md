@@ -16,6 +16,13 @@ npm test         # 시뮬레이션 테스트
 npm run build    # 타입 검사 + 배포용 빌드 (dist/)
 ```
 
+## 배포 (GitHub Pages)
+
+`index.html`은 TypeScript 원본을 불러오므로 그대로는 브라우저에서 실행되지 않는다. `main`에 푸시하면 `.github/workflows/deploy.yml`이 Vite로 빌드한 `dist/`를 Pages에 배포한다.
+
+- 최초 1회: 저장소 **Settings → Pages → Build and deployment → Source**를 **GitHub Actions**로 설정
+- 주소: `https://<사용자>.github.io/meltdown/`
+
 ## 조작
 
 | 입력 | 동작 |

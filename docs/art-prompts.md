@@ -49,14 +49,28 @@ Dim red ambient light from above, faint red glow on metal edges, worn and scratc
 
 - 원본 크기: **640×170**, 불투명
 - 생성 크기: 1536×1024로 생성한 뒤 위아래를 잘라 비율을 맞춘다
+- **오목한 자리 3곳의 위치가 게임 화면과 정확히 맞아야 한다.** 레이아웃 가이드 이미지 [`docs/art/wall_layout_guide.png`](art/wall_layout_guide.png)를 **레퍼런스 이미지와 함께 첨부**한다. 가이드의 검은 상자가 오목한 자리, 주황 선이 그 테두리다.
+
+| 자리 | 용도 | 원본 좌표 (x, y, 너비×높이) | 가로 위치 (전체 폭 대비) | 세로 위치 (전체 높이 대비) |
+|---|---|---|---|---|
+| 왼쪽 | 위험도 게이지 | 10, 20, 150×130 | 1.6% ~ 25.0% | 11.8% ~ 88.2% |
+| 가운데 | CRT 모니터 | 170, 10, 300×150 | 26.6% ~ 73.4% | 5.9% ~ 94.1% |
+| 오른쪽 | 경고등 4개 + 계기 6줄 | 480, 10, 150×150 | 75.0% ~ 98.4% | 5.9% ~ 94.1% |
+
+- 세 자리 사이 간격은 10픽셀로 아주 좁다. 자리 바깥 여백은 거의 없다.
+- 생성 후 가이드 이미지와 겹쳐 보고 어긋나면, 같은 대화에서 "move the recesses to match the attached guide exactly"로 다시 요청한다.
 
 ```
 [공통 스타일 블록]
-A wide wall of a nuclear control room, dark rust-brown riveted steel panels with vertical seams, conduits and cable trays.
-Three empty recessed mounting areas from left to right: a square recess on the left (for an analog gauge),
-a large rounded rectangular recess in the center (for a CRT monitor), and a tall rectangular recess on the right (for indicator lamps and readouts).
-The recesses are empty dark holes; do not draw the gauge, monitor or lamps themselves.
-Wide horizontal composition, aspect ratio 640:170.
+A wide wall of a nuclear control room, dark rust-brown riveted steel panels with conduits and cable trays.
+Use the attached layout guide image for composition: each black box in the guide is a recessed mounting area in the wall,
+and the recesses must have exactly the same positions, sizes and proportions as the black boxes. Keep the same aspect ratio as the guide (640:170).
+Left recess: a nearly square opening, from 1.6% to 25% of the width and from 12% to 88% of the height (for an analog gauge).
+Center recess: a wide rounded rectangle, from 26.6% to 73.4% of the width and from 6% to 94% of the height (for a CRT monitor), with a small empty nameplate along its bottom edge.
+Right recess: a square opening, from 75% to 98.4% of the width and from 6% to 94% of the height (for indicator lamps and readouts).
+The gaps between recesses are very narrow, and there is almost no margin around them.
+The recesses are empty dark holes framed by riveted steel; do not draw the gauge, monitor, lamps or any screens inside them.
+Do not draw the orange guide lines.
 ```
 
 ### 1-2. 위험도 게이지 판 — `gauge_face.png`
