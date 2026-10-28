@@ -1,5 +1,5 @@
 // 벽면 콘솔 = 보는 것: 위험도 게이지, CRT, 경고등, 계기 (GDD 12장 화면 구도)
-import { Container, Graphics, type Text } from 'pixi.js';
+import { Container, Graphics, Sprite, type Text, type Texture } from 'pixi.js';
 import { CRTFilter, GlowFilter } from 'pixi-filters';
 import { CAUSES, EQUIPMENT_NAME, FAILURE_CAUSE, type Equipment } from '../sim/data';
 import { STAGE_NAME, STAGE_NAME_KO, has, hasCause, type Game } from '../sim/game';
@@ -7,6 +7,21 @@ import { C, WALL_H, W, label } from './theme';
 
 const GAUGE = { x: 170, y: 215, r: 120 };
 const GAUGE_MAX = 150;
+
+/** 게이지 판 아트(gauge_face.png)에서 측정한 값. 원본 픽셀 좌표, 각도는 화면 기준(y 아래) 도 단위 */
+const ART_FACE = { x: 20, y: 40, scale: 2, pivotX: 74.5, pivotY: 92 };
+const ART_NEEDLE_PIVOT = { x: 3, y: 59 };
+/** 위험도 → 아트 눈금 각도. 그림의 색 경계(초록/노랑, 노랑/빨강)가 규칙의 40%·75%에 오도록 구간별로 맞춘다 */
+const ART_STOPS: [number, number][] = [[0, -158], [40, -89], [75, -45.7], [100, -21], [GAUGE_MAX, 20]];
+
+function artAngle(risk: number): number {
+  const v = Math.max(0, Math.min(GAUGE_MAX, risk));
+  for (let i = 1; i < ART_STOPS.length; i++) {
+    const [r0, a0] = ART_STOPS[i - 1], [r1, a1] = ART_STOPS[i];
+    if (v <= r1) return (a0 + (v - r0) / (r1 - r0) * (a1 - a0)) * Math.PI / 180;
+  }
+  return ART_STOPS[ART_STOPS.length - 1][1] * Math.PI / 180;
+}
 
 /** 위험도 → 각도 (0% = 왼쪽 수평, 100% = 오른쪽 수평 = 눈금 끝, 150% = 오른쪽 아래로 40°) */
 function riskAngle(risk: number): number {
@@ -17,6 +32,9 @@ function riskAngle(risk: number): number {
 
 export class Wall extends Container {
   private needle = new Graphics();
+  private needleSprite: Sprite | null = null;
+  /** 게이지 아트가 들어오면 숨기는 임시 게이지 판 */
+  private facePlaceholder = new Container();
   private needleValue = 0;
   private gaugeText: Text;
   private crt = new Container();
@@ -28,18 +46,22 @@ export class Wall extends Container {
   private lamps: { e: Equipment; g: Graphics; t: Text }[] = [];
   private readouts: Record<string, Text> = {};
   private stableText: Text;
+  /** 벽면 아트(wall_bg.png)가 들어오면 숨기는 임시 그래픽: 벽, 오목한 자리 테두리 */
+  private placeholder = new Graphics();
 
   constructor() {
     super();
-    const bg = new Graphics()
+    const ph = this.placeholder
       .rect(0, 0, W, WALL_H).fill(C.wall)
       .rect(0, WALL_H - 8, W, 8).fill(C.wallDark);
-    for (let x = 0; x < W; x += 64) bg.rect(x, 0, 2, WALL_H).fill(C.wallDark);
-    this.addChild(bg);
+    for (let x = 0; x < W; x += 64) ph.rect(x, 0, 2, WALL_H).fill(C.wallDark);
+    ph.roundRect(20, 40, 300, 260, 10).fill(C.wallDark)   // 게이지 자리
+      .roundRect(340, 20, 600, 300, 18).fill(C.metalDark) // CRT 자리
+      .roundRect(960, 20, 300, 300, 10).fill(C.wallDark); // 경고등·계기 자리
+    this.addChild(ph);
 
     // 위험도 게이지
     const face = new Graphics()
-      .roundRect(20, 40, 300, 260, 10).fill(C.wallDark)
       .roundRect(30, 50, 280, 240, 8).fill(0xe8b07a);
     const zones: [number, number, number][] = [[0, 40, C.green], [40, 75, C.yellow], [75, 100, C.red]];
     const zone = (a: number, b: number, color: number) => {
@@ -56,17 +78,16 @@ export class Wall extends Container {
         .stroke({ width: v % 50 === 0 ? 3 : 1, color: 0x2a120d });
     }
     face.circle(GAUGE.x, GAUGE.y, 10).fill(0x2a120d);
-    this.addChild(face);
     const ttl = label('☢ 위험도', 16, 0x2a120d);
     ttl.position.set(GAUGE.x - ttl.width / 2, GAUGE.y + 22);
-    this.addChild(ttl);
+    this.facePlaceholder.addChild(face, ttl);
+    this.addChild(this.facePlaceholder);
     this.gaugeText = label('', 12, 0x5a2a1a);
     this.gaugeText.position.set(40, 268);
     this.addChild(this.needle, this.gaugeText);
 
     // CRT
     const bezel = new Graphics()
-      .roundRect(340, 20, 600, 300, 18).fill(C.metalDark)
       .roundRect(356, 34, 568, 272, 14).fill(C.crt);
     this.addChild(bezel);
     this.crt.position.set(356, 34);
@@ -80,8 +101,6 @@ export class Wall extends Container {
     this.addChild(this.crt);
 
     // 오른쪽: 경고등 + 디지털 계기 (2000 단계 = 디지털 표시)
-    const panel = new Graphics().roundRect(960, 20, 300, 300, 10).fill(C.wallDark);
-    this.addChild(panel);
     (['pump', 'turbine', 'sg', 'rodDrive'] as Equipment[]).forEach((e, i) => {
       const g = new Graphics();
       g.position.set(990 + i * 70, 50);
@@ -106,10 +125,38 @@ export class Wall extends Container {
     this.addChild(this.stableText);
   }
 
+  /** 벽면 아트 적용: 원본 640×170을 2배로 깔고 임시 벽을 숨긴다 (docs/art-prompts.md 1-1) */
+  useBackground(texture: Texture) {
+    const bg = new Sprite(texture);
+    bg.scale.set(W / texture.width);
+    this.addChildAt(bg, 0);
+    this.placeholder.visible = false;
+  }
+
+  /** 위험도 게이지 아트 적용 (docs/art-prompts.md 1-2, 1-3) */
+  useGauge(face: Texture, needle: Texture) {
+    const f = new Sprite(face);
+    f.position.set(ART_FACE.x, ART_FACE.y);
+    f.scale.set(ART_FACE.scale);
+    const n = new Sprite(needle);
+    n.anchor.set(ART_NEEDLE_PIVOT.x / needle.width, ART_NEEDLE_PIVOT.y / needle.height);
+    n.position.set(ART_FACE.x + ART_FACE.pivotX * ART_FACE.scale, ART_FACE.y + ART_FACE.pivotY * ART_FACE.scale);
+    n.scale.set(ART_FACE.scale);
+    this.addChildAt(f, this.getChildIndex(this.facePlaceholder));
+    this.addChildAt(n, this.getChildIndex(this.needle));
+    this.facePlaceholder.visible = false;
+    this.needle.visible = false;
+    this.needleSprite = n;
+    // 노심 한계 글자는 게이지 아래 벽으로 옮긴다 (판 테두리가 어두워서)
+    this.gaugeText.style.fill = C.amber;
+    this.gaugeText.position.set(30, 304);
+  }
+
   update(g: Game, dt: number, now: number) {
     // 바늘: 실제 값을 반 박자 늦게 따라가고 떨린다 (GDD 3.4)
     this.needleValue += (g.risk - this.needleValue) * Math.min(1, dt * 1.8);
     const jitter = Math.sin(now * 0.031) * 0.6 + Math.sin(now * 0.017) * 0.4 + (this.needleValue > 75 ? Math.sin(now * 0.09) * 1.5 : 0);
+    if (this.needleSprite) this.needleSprite.rotation = artAngle(this.needleValue + jitter) + Math.PI / 2;
     const a = riskAngle(this.needleValue + jitter);
     this.needle.clear()
       .moveTo(GAUGE.x, GAUGE.y)
