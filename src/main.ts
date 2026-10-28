@@ -4,8 +4,11 @@ import type { ModuleDef } from './sim/data';
 import { Desk } from './ui/desk';
 import { Evacuation, EVAC } from './ui/evacuation';
 import { EndingOverlay, PauseBanner, SupplyOverlay, TitleOverlay } from './ui/overlays';
-import { C, H, W } from './ui/theme';
+import { C, FONT_NAME, H, W } from './ui/theme';
 import { Wall } from './ui/wall';
+
+// 글자를 만들기 전에 픽셀 폰트를 먼저 불러온다 (없으면 기본 글꼴로 진행)
+await document.fonts.load(`12px "${FONT_NAME}"`, '가A').catch(() => undefined);
 
 const app = new Application();
 await app.init({ width: W, height: H, background: C.bg, antialias: true });
