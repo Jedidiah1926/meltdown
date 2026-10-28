@@ -1,0 +1,23 @@
+{
+  "name": "meltdown",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "원자로 안정화 로그라이크 — 프로토타입",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "pixi-filters": "6.1.5",
+    "pixi.js": "8.22.0"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "vite": "8.3.5",
+    "vitest": "5.0.5"
+  }
+}
