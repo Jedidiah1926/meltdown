@@ -17,7 +17,7 @@ export const EVAC = {
 };
 
 /** 그림자 크기: 화면 아래쪽에 걸친 상반신 (머리 꼭대기 ~ 화면 아래 끝) */
-const SHADOW_H = 300;
+const SHADOW_H = 520;
 const SHADOW_ALPHA = 0.5;
 
 export class Evacuation extends Container {
