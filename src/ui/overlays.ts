@@ -68,7 +68,7 @@ export class SupplyOverlay extends Container {
       return;
     }
     this.body.addChild(new Graphics().rect(0, 0, W, H).fill({ color: C.black, alpha: 0.75 }));
-    const head = label(`📦 보급 도착 (${s.reason}) — 하나를 고르세요`, 24, C.amber);
+    const head = label(`▣ 보급 도착 (${s.reason}) — 하나를 고르세요`, 24, C.amber);
     head.anchor.set(0.5, 0);
     head.position.set(W / 2, 120);
     this.body.addChild(head);
@@ -85,7 +85,7 @@ export class SupplyOverlay extends Container {
       desc.position.set(12, 100);
       card.addChild(cat, name, desc);
       if (m.side) {
-        const side = label(`⚠ 부작용: ${m.side}`, 13, C.red, { wordWrap: true, wordWrapWidth: 256, lineHeight: 19 });
+        const side = label(`▲ 부작용: ${m.side}`, 13, C.red, { wordWrap: true, wordWrapWidth: 256, lineHeight: 19 });
         side.position.set(12, 210);
         card.addChild(side);
       }
@@ -127,6 +127,9 @@ export class EndingOverlay extends Container {
   private fade = new Graphics().rect(0, 0, W, H).fill(C.black);
   private content = new Container();
   private elapsed = 0;
+  /** 페이드가 시작되기 전 기다리는 시간 (포기 결말은 대피 연출이 먼저 나온다) */
+  private delay = 0;
+  private maxFade = 0.92;
 
   constructor(private onRestart: () => void) {
     super();
@@ -134,11 +137,13 @@ export class EndingOverlay extends Container {
     this.visible = false;
   }
 
-  show(g: Game) {
+  show(g: Game, delay = 0) {
     const e = g.ending!;
     const def = ENDINGS[e.kind];
     this.visible = true;
     this.elapsed = 0;
+    this.delay = delay;
+    this.maxFade = e.kind === 'abandon' ? 1 : 0.92;
     this.content.removeChildren();
     const title = label(def.title, 64, def.color, { fontWeight: 'bold', letterSpacing: 6 });
     title.anchor.set(0.5);
@@ -160,7 +165,9 @@ export class EndingOverlay extends Container {
   update(dt: number) {
     if (!this.visible) return;
     this.elapsed += dt;
-    this.fade.alpha = Math.min(0.92, this.elapsed / 3);
-    this.content.alpha = Math.max(0, Math.min(1, (this.elapsed - 2.5) / 1.5));
+    const t = this.elapsed - this.delay;
+    this.fade.alpha = Math.max(0, Math.min(this.maxFade, t / 3));
+    this.content.alpha = Math.max(0, Math.min(1, (t - 2.5) / 1.5));
+    this.content.visible = this.content.alpha > 0;
   }
 }

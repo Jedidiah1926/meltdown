@@ -99,7 +99,7 @@ export const MODULES: Record<ModuleId, ModuleDef> = {
   },
   coreLimit: {
     id: 'coreLimit', name: '노심 한계 측정기', short: '한계측정', category: 'info',
-    desc: '이번 판의 멜트다운 지점을 위험도 게이지 아래에 숫자로 표시한다.',
+    desc: '이번 판의 멜트다운 지점을 이 모듈 카드에 숫자로 표시한다.',
   },
   fastRods: {
     id: 'fastRods', name: '고속 제어봉 구동장치', short: '고속봉', category: 'support',

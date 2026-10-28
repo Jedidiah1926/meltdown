@@ -36,8 +36,18 @@ export const CATEGORY_COLOR = {
   risky: 0xc0392b,
 } as const;
 
-export const FONT = '"Galmuri11", "DungGeunMo", "Noto Sans Mono CJK KR", "D2Coding", monospace';
+/** 마루미냐 한글 (SIL OFL 1.1, public/fonts/). 12px 픽셀 폰트 */
+export const FONT_NAME = 'x12y12pxMaruMinyaHangul';
+export const FONT = `"${FONT_NAME}", "Noto Sans Mono CJK KR", monospace`;
+
+/** 픽셀 폰트가 선명하도록 글자 크기를 12의 배수로 맞춘다 */
+export function pixelSize(size: number): number {
+  if (size < 18) return 12;
+  return Math.round(size / 12) * 12;
+}
 
 export function label(text: string, size = 14, fill: number = C.text, extra: TextStyleOptions = {}): Text {
-  return new Text({ text, style: { fontFamily: FONT, fontSize: size, fill, ...extra } });
+  // 픽셀 폰트에는 굵은체가 없어서 가짜 굵게(번짐)를 쓰지 않는다
+  const { fontWeight: _bold, ...rest } = extra;
+  return new Text({ text, style: { fontFamily: FONT, fontSize: pixelSize(size), fill, ...rest } });
 }

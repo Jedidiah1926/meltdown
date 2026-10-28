@@ -143,15 +143,32 @@ No numbers, no text.
 ### 2-1. 책상 상판 — `desk_bg.png`
 
 - 원본 크기: **640×190**, 불투명
-- 정면에서 본 책상 상판. 왼쪽과 오른쪽에 조작 장치가 놓일 자리, 가운데에 모듈 슬롯 베이가 있다.
+- 정면에서 본 책상 상판. **조작 장치의 고정된 받침 부분까지 그려 넣는다.** 움직이는 부품(레버 손잡이, 다이얼 손잡이, 휠, SCRAM 버튼·덮개, 포기 레버 손잡이·덮개)은 게임에서 따로 움직이므로 **그리지 않는다** (2-2 ~ 2-6에서 따로 만든다).
+- **위치가 게임 화면과 정확히 맞아야 한다.** 배치 가이드 [`docs/art/desk_layout_guide.png`](art/desk_layout_guide.png)를 **지금의 `desk_bg.png`와 함께 첨부**하고, 지금 그림의 질감·색을 유지하라고 요청한다.
+
+| 가이드 표시 | 그릴 것 | 원본 좌표 (x, y, 너비×높이) | 가로 위치 (폭 대비) | 세로 위치 (높이 대비) |
+|---|---|---|---|---|
+| 흰 테두리 막대 + 왼쪽 눈금 21개 | 제어봉 레버 **홈과 눈금** (손잡이 없음) | 60, 28, 10×134 / 눈금은 x 48~54 | 9.4% ~ 10.9% | 14.7% ~ 85.3% |
+| 노란 사각형 | SCRAM **하우징**: 노랑·검정 경고 줄무늬 테두리와 어두운 안쪽 (버튼 없음) | 107, 45, 61×60 | 16.7% ~ 26.3% | 23.7% ~ 55.3% |
+| 주황 테두리 8칸 | 모듈 슬롯 소켓 (지금 그림 그대로) | 202+60c, 40 / 101, 55×54 | 31.6% ~ 76.1% | 21.1% ~ 81.6% |
+| 하늘색 원 (왼쪽) + 눈금 | 냉각 펌프 **다이얼 판**: 7시 반 → 4시 반 방향 270° 눈금 11개, 마지막 2개 빨강 (손잡이 없음) | 중심 492, 70, 반지름 35 | 71.4% ~ 82.3% | 18.4% ~ 55.3% |
+| 하늘색 원 (오른쪽) + 가운데 점 | 터빈 밸브 **휠 받침**: 둥근 받침판과 가운데 축 (휠 없음) | 중심 567, 70, 반지름 34 | 83.3% ~ 93.9% | 18.9% ~ 54.7% |
+| 빨간 테두리 사각형 (가운데 아래) | 포기 버튼 **상자**: 경고 줄무늬 테두리의 작은 검은 상자 (버튼·덮개 없음) | 285, 167, 70×20 | 44.5% ~ 55.5% | 87.9% ~ 98.4% |
+| 양 끝 흰 테두리 막대 | 포기 레버 홈 (지금 그림 그대로) | 6 / 620, 38, 14×110 | 0.9% ~ 3.1% / 96.9% ~ 99.1% | 20% ~ 77.9% |
+
+- 가이드의 색깔 선(흰색·노랑·주황·하늘색·빨강)은 위치 표시일 뿐이니 **그대로 그리지 않는다.**
+- 생성 후 가이드와 겹쳐 보고 어긋나면 "move the parts to match the attached guide exactly"로 다시 요청한다.
 
 ```
 [공통 스타일 블록]
-The top surface of an operator's control desk seen straight from the front, worn dark brown metal with a lighter rust edge along the top.
-In the center, a large dark recessed bay holding an empty grid of 2 rows by 4 columns of square sockets.
-On the left and right sides, plain flat desk surface with a few scratches and bolts (controls will be placed there).
-At the far left and far right edges, a narrow vertical slot in the desk surface for a lever.
-Wide horizontal composition, aspect ratio 640:190.
+Redraw the attached control desk image (keep its exact style, colors, wood-and-rusty-metal texture, the 2x4 grid of module sockets in the center and the narrow lever slots at both far ends),
+and add the FIXED bases of the controls, placed exactly where the attached layout guide marks them. Keep the same aspect ratio as the guide (640:190).
+- Left plate: a tall narrow black slotted rail for a vertical lever, with 21 small evenly spaced tick marks on its left side (every fifth one longer). No lever handle.
+- Left plate, right of the rail: a square emergency button housing with a yellow-and-black diagonal hazard stripe border and a dark empty recess inside. No button, no cover.
+- Right plate, left: a round dark dial plate with 11 tick marks on a 270-degree arc from the 7:30 position clockwise to the 4:30 position; the last two ticks red. No knob.
+- Right plate, right: a round bolted mounting plate with a short central axle hub for a valve handwheel. No wheel.
+- Bottom center, below the sockets: a small wide black box with a yellow-and-black hazard border. No button, no cover.
+Do not draw any moving parts (handles, knobs, wheels, buttons, covers). Do not draw the colored guide lines. No text.
 ```
 
 ### 2-2. 제어봉 레버 — `rod_track.png`, `rod_handle.png`
@@ -283,7 +300,23 @@ Transparent background.
 
 ---
 
-## 3. 결말 일러스트 (선택)
+## 3. 연출
+
+### 3-1. 대피하는 운전원의 상반신 그림자 — `evac_shadow.png`
+
+- 포기 결말에서, 책상 앞에 있던 운전원의 **상반신 그림자**가 옅게 오른쪽으로 빠져나가는 장면에 쓴다.
+- 원본 크기: **160×150**, 투명 배경. **뒤에서 본** 머리·어깨·몸통 윗부분만 (아래쪽은 화면 밖으로 잘린다)
+- 게임에서 반투명하게 깔고 흐리게 번지게 처리하므로, 그림은 **진한 단색 실루엣**이면 된다.
+- 지금은 같은 모양의 임시 그래픽이 대신 나온다.
+
+```
+[공통 스타일 블록]
+The silhouette of a person's head, shoulders and upper torso seen from directly behind, as if sitting at a desk in front of the viewer.
+Solid near-black shape (#0d0605) with no details, no rim light. The bottom of the torso is cut off flat at the bottom edge of the image.
+Centered, transparent background.
+```
+
+## 4. 결말 일러스트 (선택)
 
 - 원본 크기: 각 **640×360**, 불투명
 - 결말 연출에서 화면이 어두워진 뒤 떠오르는 그림. 프로스트펑크식 페이드 아웃.
@@ -302,14 +335,16 @@ A wide cinematic pixel art scene, aspect ratio 16:9: <그림 설명>.
 
 ---
 
-## 4. 체크리스트
+## 5. 체크리스트
 
 - [x] 벽면 배경으로 스타일 확정 (`public/art/wall_bg.png`, 게임에 적용됨)
-- [x] 위험도 게이지 판·바늘 (게임에 적용됨. 그림의 색 경계는 실제로 약 50%·81% 위치라서, 바늘 각도를 구간별로 맞춰 규칙의 40%·75%가 경계를 가리키게 함)
-- [x] CRT 테두리 (게임에 적용됨)
+- [x] 위험도 게이지 판·바늘 (판 그림의 위아래 녹슨 배경 띠는 잘라내고 테두리 부분만 벽면 자리 안에 맞춤. 게임에 적용됨. 그림의 색 경계는 실제로 약 50%·81% 위치라서, 바늘 각도를 구간별로 맞춰 규칙의 40%·75%가 경계를 가리키게 함)
+- [x] CRT 테두리 (만들었지만 지금은 쓰지 않음: 벽면 그림의 CRT 자리에 이미 테두리와 이름판이 있어서 겹쳤다)
 - [x] 경고등 (꺼짐·주황·빨강 + 추가로 만든 초록까지 4종, 게임에 적용됨: 정상 초록 / 고장 징후 주황 깜빡임 / 고장 빨강)
 - [ ] 계기 판넬
-- [ ] 책상 상판
+- [x] 책상 상판 1차 (게임에 적용됨, 슬롯·포기 레버 위치를 그림에 맞춤)
+- [ ] 책상 상판 2차: 조작 장치 받침까지 그려 넣은 버전 (2-1, `desk_layout_guide.png`)
 - [ ] 제어봉 레버, SCRAM, 펌프 다이얼, 터빈 휠, 포기 장치
 - [ ] 슬롯 2종, 모듈 카트리지 6종, 아이콘 13종
+- [ ] 대피 상반신 그림자 (지금은 임시 그래픽)
 - [ ] (선택) 결말 일러스트 4종

@@ -52,6 +52,10 @@ git push --follow-tags   # 태그가 올라가면 Release가 자동으로 만들
 | Space | 일시정지 (일시정지 중 모듈 드래그로 재배치) |
 | 책상 양 끝 레버 2개 → 가운데 아래 덮개 → 버튼 | 포기 |
 
+## 사용한 글꼴
+
+- [마루미냐 한글 (x12y12pxMaruMinyaHangul)](https://github.com/quiple/x12y12pxMaruMinyaHangul) — SIL Open Font License 1.1 (`public/fonts/x12y12pxMaruMinyaHangul-OFL.txt`)
+
 ## 구조
 
 - `src/sim/` — 원자로 시뮬레이션과 한 판의 규칙 (화면과 분리된 순수 TypeScript)

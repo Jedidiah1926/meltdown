@@ -2,9 +2,13 @@ import { Application, Texture } from 'pixi.js';
 import { DT, newGame, setLever, setPump, setValve, step, takeSupply, type Game } from './sim/game';
 import type { ModuleDef } from './sim/data';
 import { Desk } from './ui/desk';
+import { Evacuation, EVAC } from './ui/evacuation';
 import { EndingOverlay, PauseBanner, SupplyOverlay, TitleOverlay } from './ui/overlays';
-import { C, H, W } from './ui/theme';
+import { C, FONT_NAME, H, W } from './ui/theme';
 import { Wall } from './ui/wall';
+
+// 글자를 만들기 전에 픽셀 폰트를 먼저 불러온다 (없으면 기본 글꼴로 진행)
+await document.fonts.load(`12px "${FONT_NAME}"`, '가A').catch(() => undefined);
 
 const app = new Application();
 await app.init({ width: W, height: H, background: C.bg, antialias: true });
@@ -35,8 +39,9 @@ const desk = new Desk(() => game, {
 });
 const pauseBanner = new PauseBanner();
 const ending = new EndingOverlay(restart);
+const evacuation = new Evacuation();
 const title = new TitleOverlay(() => { started = true; title.visible = false; });
-app.stage.addChild(wall, desk, pauseBanner, supply, ending, title);
+app.stage.addChild(wall, desk, evacuation, pauseBanner, supply, ending, title);
 
 /** public/art/ 의 픽셀아트 불러오기. <img>로 읽어야 Electron(file://)에서도 동작한다. 없으면 임시 그래픽 유지 */
 async function loadArt(name: string): Promise<Texture> {
@@ -51,7 +56,7 @@ loadArt('wall_bg.png').then((t) => wall.useBackground(t)).catch(() => console.wa
 Promise.all([loadArt('gauge_face.png'), loadArt('gauge_needle.png')])
   .then(([face, needle]) => wall.useGauge(face, needle))
   .catch(() => console.warn('게이지 아트 없음 — 임시 그래픽 사용'));
-loadArt('crt_bezel.png').then((t) => wall.useCrtBezel(t)).catch(() => console.warn('crt_bezel.png 없음'));
+loadArt('desk_bg.png').then((t) => desk.useBackground(t)).catch(() => console.warn('desk_bg.png 없음 — 임시 그래픽 사용'));
 Promise.all(['off', 'amber', 'red', 'green'].map((k) => loadArt(`lamp_${k}.png`)))
   .then(([off, amber, red, green]) => wall.useLamps({ off, amber, red, green }))
   .catch(() => console.warn('경고등 아트 없음 — 임시 그래픽 사용'));
@@ -73,6 +78,8 @@ function restart() {
   desk.abandonPulled = { L: false, R: false };
   desk.abandonCoverOpen = false;
   ending.hide();
+  evacuation.stop();
+  app.stage.position.set(0, 0);
   title.visible = false;
   started = true;
 }
@@ -118,7 +125,21 @@ app.ticker.add((ticker) => {
   // 보급 화면은 내용이 바뀔 때만 다시 그린다
   const key = game.supplyQueue[0] ? `${game.supplyQueue.length}:${supply.pendingReplace?.id ?? ''}` : null;
   if (key !== shownSupply) { supply.show(game); shownSupply = key; }
-  if (game.ending && !endingShown) { ending.show(game); endingShown = true; }
+  if (game.ending && !endingShown) {
+    endingShown = true;
+    if (game.ending.kind === 'abandon') {
+      // 대피 연출: 실루엣이 빠져나가고 원자로가 임계점으로 치닫다가 페이드아웃
+      evacuation.start(game);
+      ending.show(game, EVAC.fadeStart);
+    } else {
+      ending.show(game);
+    }
+  }
+  evacuation.update(game, dt);
+  if (evacuation.visible) {
+    const k = evacuation.shake;
+    app.stage.position.set((Math.random() - 0.5) * k, (Math.random() - 0.5) * k);
+  }
   pauseBanner.visible = paused && !game.ending;
   wall.update(game, dt, now);
   desk.update(now);
