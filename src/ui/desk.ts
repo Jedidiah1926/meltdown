@@ -1,5 +1,5 @@
 // 책상 = 만지는 것: 좌우에 기본 조작, 가운데에 모듈 슬롯 (GDD 6장, 8.6, 12장)
-import { Container, Graphics, type FederatedPointerEvent, type FederatedWheelEvent, type Text } from 'pixi.js';
+import { Container, Graphics, Sprite, type FederatedPointerEvent, type FederatedWheelEvent, type Text, type Texture } from 'pixi.js';
 import { CATEGORY_NAME, MODULES, type ModuleId } from '../sim/data';
 import {
   LEVER_NOTCHES, SLOT_COLS, abandon, scram, setLever, setPump, setValve, useModule, type Game,
@@ -10,9 +10,12 @@ const LEVER = { x: 130, top: 400, bottom: 660 };
 const SCRAM_BOX = { x: 215, y: 430, w: 120, h: 120 };
 const DIAL = { x: 985, y: 480, r: 52 };
 const WHEEL = { x: 1135, y: 480, r: 62 };
-const SLOT = { x: 410, y: 385, w: 110, h: 108, gap: 8 };
-const ABANDON_LEVERS = [{ x: 42, side: 'L' }, { x: W - 42, side: 'R' }] as const;
-const ABANDON_BOX = { x: 570, y: 664, w: 140, h: 44 };
+/** 슬롯 위치는 책상 아트(desk_bg.png)의 소켓에 맞춘다: 원본 (202 + 60c, 40 / 101), 55×54 의 2배 */
+const SLOT = { x: 404, y: 420, w: 110, h: 108, gapX: 10, gapY: 14 };
+/** 포기 레버는 책상 양 끝의 홈(원본 x 6~20, y 38~148)에 들어간다 */
+const ABANDON_LEVERS = [{ x: 26, side: 'L' }, { x: W - 26, side: 'R' }] as const;
+const ABANDON_TRACK = { top: 416, bottom: 636 };
+const ABANDON_BOX = { x: 570, y: 674, w: 140, h: 40 };
 
 const DIAL_MIN = -225 * Math.PI / 180, DIAL_MAX = 45 * Math.PI / 180;
 
@@ -28,7 +31,7 @@ export interface DeskHooks {
 
 export function slotRect(i: number) {
   const r = Math.floor(i / SLOT_COLS), c = i % SLOT_COLS;
-  return { x: SLOT.x + c * (SLOT.w + SLOT.gap), y: SLOT.y + r * (SLOT.h + SLOT.gap), w: SLOT.w, h: SLOT.h };
+  return { x: SLOT.x + c * (SLOT.w + SLOT.gapX), y: SLOT.y + r * (SLOT.h + SLOT.gapY), w: SLOT.w, h: SLOT.h };
 }
 
 export class Desk extends Container {
@@ -41,14 +44,17 @@ export class Desk extends Container {
   private slotLayer = new Container();
   private slotTexts: Text[] = [];
   private texts: Record<string, Text> = {};
+  /** 책상 아트(desk_bg.png)가 들어오면 숨기는 임시 책상 */
+  private placeholder = new Graphics();
+  private hasArt = false;
 
   constructor(private g: () => Game, private hooks: DeskHooks) {
     super();
-    const bg = new Graphics()
+    const bg = this.placeholder
       .rect(0, WALL_H, W, H - WALL_H).fill(C.desk)
       .rect(0, WALL_H, W, 14).fill(C.deskEdge);
     // 슬롯 베이
-    bg.roundRect(SLOT.x - 14, SLOT.y - 14, 4 * SLOT.w + 3 * SLOT.gap + 28, 2 * SLOT.h + SLOT.gap + 28, 8).fill(C.wallDark);
+    bg.roundRect(SLOT.x - 14, SLOT.y - 14, 4 * SLOT.w + 3 * SLOT.gapX + 28, 2 * SLOT.h + SLOT.gapY + 28, 8).fill(C.wallDark);
     this.addChild(bg, this.dyn, this.slotLayer);
 
     const t = (key: string, s: string, x: number, y: number, size = 13, fill: number = C.textDim) => {
@@ -65,9 +71,9 @@ export class Desk extends Container {
     t('dial', '', 955, 545, 14, C.amber);
     t('wheelTitle', '터빈 밸브 [E/D]', 1080, 400);
     t('wheel', '', 1080, 555, 13, C.amber);
-    t('abandonL', '포기', 26, 576, 12);
-    t('abandonR', '포기', W - 58, 576, 12);
-    t('info', '', SLOT.x - 10, 628, 13, C.text);
+    t('abandonL', '포기', 14, 656, 12);
+    t('abandonR', '포기', W - 38, 656, 12);
+    t('info', '', SLOT.x, 654, 13, C.text);
     this.texts.info.style.wordWrap = true;
     this.texts.info.style.wordWrapWidth = 480;
 
@@ -92,7 +98,7 @@ export class Desk extends Container {
     this.hit(DIAL.x - DIAL.r, DIAL.y - DIAL.r, DIAL.r * 2, DIAL.r * 2, (e) => { this.drag = { kind: 'dial' }; this.dragMove(e); }, '냉각 펌프 다이얼: 드래그 또는 휠. 85% 이상은 펌프가 닳는다.', (e) => setPump(this.g(), this.g().pumpCmd - Math.sign(e.deltaY) * 0.03));
     this.hit(WHEEL.x - WHEEL.r, WHEEL.y - WHEEL.r, WHEEL.r * 2, WHEEL.r * 2, (e) => { this.drag = { kind: 'wheel', last: this.angleTo(WHEEL, e) }; }, '터빈 밸브 휠: 돌려서 연다/닫는다. 실제 밸브는 천천히 따라온다.', (e) => setValve(this.g(), this.g().valveTarget - Math.sign(e.deltaY) * 0.03));
     for (const lv of ABANDON_LEVERS) {
-      this.hit(lv.x - 18, 420, 36, 150, () => { this.abandonPulled[lv.side] = !this.abandonPulled[lv.side]; if (!this.bothPulled()) this.abandonCoverOpen = false; }, '포기 레버: 좌우 레버를 모두 당기면 포기 버튼이 나타난다.');
+      this.hit(lv.x - 18, ABANDON_TRACK.top, 36, ABANDON_TRACK.bottom - ABANDON_TRACK.top, () => { this.abandonPulled[lv.side] = !this.abandonPulled[lv.side]; if (!this.bothPulled()) this.abandonCoverOpen = false; }, '포기 레버: 좌우 레버를 모두 당기면 포기 버튼이 나타난다.');
     }
     this.hit(ABANDON_BOX.x, ABANDON_BOX.y, ABANDON_BOX.w, ABANDON_BOX.h, () => {
       if (!this.bothPulled()) return;
@@ -183,6 +189,16 @@ export class Desk extends Container {
 
   setInfo(text: string) { this.texts.info.text = text; }
 
+  /** 책상 아트 적용: 원본 640×190을 2배로 책상 영역에 깐다 (docs/art-prompts.md 2-1) */
+  useBackground(texture: Texture) {
+    const bg = new Sprite(texture);
+    bg.position.set(0, WALL_H);
+    bg.scale.set(W / texture.width);
+    this.addChildAt(bg, 0);
+    this.placeholder.visible = false;
+    this.hasArt = true;
+  }
+
   update(now: number) {
     const g = this.g();
     const d = this.dyn.clear();
@@ -242,8 +258,8 @@ export class Desk extends Container {
     // 포기 레버 2개와 포기 버튼
     for (const lv of ABANDON_LEVERS) {
       const pulled = this.abandonPulled[lv.side];
-      d.rect(lv.x - 6, 430, 12, 130).fill(C.black);
-      d.roundRect(lv.x - 16, pulled ? 530 : 430, 32, 26, 4).fill(pulled ? C.red : C.metal);
+      if (!this.hasArt) d.rect(lv.x - 6, ABANDON_TRACK.top, 12, ABANDON_TRACK.bottom - ABANDON_TRACK.top).fill(C.black);
+      d.roundRect(lv.x - 14, pulled ? ABANDON_TRACK.bottom - 30 : ABANDON_TRACK.top + 4, 28, 26, 4).fill(pulled ? C.red : C.metal);
     }
     if (this.bothPulled()) {
       const b = ABANDON_BOX;
@@ -256,7 +272,8 @@ export class Desk extends Container {
     for (let i = 0; i < 8; i++) {
       const r = slotRect(i);
       const id = g.slots[i];
-      d.roundRect(r.x, r.y, r.w, r.h, 6).fill(0x140806).stroke({ width: 2, color: 0x4a2a20 });
+      // 아트가 있으면 빈 소켓은 그림 그대로 둔다
+      if (!this.hasArt) d.roundRect(r.x, r.y, r.w, r.h, 6).fill(0x140806).stroke({ width: 2, color: 0x4a2a20 });
       if (id) {
         const def = MODULES[id];
         const col = CATEGORY_COLOR[def.category];
