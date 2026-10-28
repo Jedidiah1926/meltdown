@@ -73,6 +73,8 @@ export interface Game {
   tripUntil: number;
   // 모듈
   slots: (ModuleId | null)[];
+  /** 손에 든 모듈: 아직 끼우지 않았다. 끼운 것 + 손에 든 것 ≤ 최대 (GDD 8.6) */
+  hand: ModuleId[];
   supplyQueue: Supply[];
   discoveredCombos: Set<string>;
   // 결말
@@ -99,7 +101,7 @@ export function newGame(seed = Math.floor(Math.random() * 1e9), forcedCause?: Ca
     dura: { pump: 100, turbine: 100, sg: 100, rodDrive: 100 },
     causes: [], stage: 1, reached: new Set([1]), stageDownTimer: 0,
     risk: 0, meltPoint: 140 + rng() * 10, tripUntil: 0,
-    slots: Array(SLOT_COLS * SLOT_ROWS).fill(null),
+    slots: Array(SLOT_COLS * SLOT_ROWS).fill(null), hand: [],
     supplyQueue: [], discoveredCombos: new Set(),
     scrammed: false, stableTimer: 0, coldTimer: 0, ending: null, log: [],
     prevT: 300, prevPr: 69, leverHistory: [],
@@ -116,7 +118,8 @@ export function newGame(seed = Math.floor(Math.random() * 1e9), forcedCause?: Ca
     const m = weightedPick(rng, pool.filter((x) => !start.includes(x.id)), (x) => SUPPLY_WEIGHT[x.category]);
     start.push(m.id);
   }
-  start.forEach((id, i) => { g.slots[i] = id; });
+  // 처음에는 손에 들고 시작하고, 원할 때 끼운다
+  g.hand.push(...start);
   log(g, `${STAGE_NAME[1]} 선포 — 운전원은 원자로를 안정화하라.`, 'warn');
   return g;
 }
@@ -124,6 +127,9 @@ export function newGame(seed = Math.floor(Math.random() * 1e9), forcedCause?: Ca
 // ---------- 조회 ----------
 
 export const has = (g: Game, id: ModuleId) => g.slots.includes(id);
+/** 가질 수 있는 모듈 최대 수 = 슬롯 수 (끼운 것 + 손에 든 것) */
+export const capacity = (g: Game) => g.slots.length;
+export const heldCount = (g: Game) => g.slots.filter(Boolean).length + g.hand.length;
 export const hasCause = (g: Game, id: CauseId) => g.causes.some((c) => c.id === id);
 const cause = (g: Game, id: CauseId) => g.causes.find((c) => c.id === id);
 
@@ -177,7 +183,7 @@ function resolveCause(g: Game, id: CauseId, how: string) {
 // ---------- 보급 ----------
 
 function queueSupply(g: Game, reason: string) {
-  const pool = Object.values(MODULES).filter((m) => m.category === 'fix' || !has(g, m.id));
+  const pool = Object.values(MODULES).filter((m) => m.category === 'fix' || (!has(g, m.id) && !g.hand.includes(m.id)));
   const options: ModuleDef[] = [];
   while (options.length < 3) {
     const left = pool.filter((m) => !options.includes(m));
@@ -188,17 +194,23 @@ function queueSupply(g: Game, reason: string) {
   log(g, `▣ 보급 도착 (${reason})`, 'good');
 }
 
-/** 보급 선택. slot이 차 있으면 기존 모듈을 버리고 교체한다. moduleId가 null이면 건너뛴다. */
-export function takeSupply(g: Game, moduleId: ModuleId | null, slot?: number): boolean {
+/** 버릴 모듈 위치: 끼운 슬롯 또는 손 */
+export type ModuleRef = { slot: number } | { hand: number };
+
+/** 보급 선택. 고른 모듈은 손으로 온다. 자리가 꽉 찼으면 discard로 버릴 모듈을 정해야 한다. moduleId가 null이면 건너뛴다. */
+export function takeSupply(g: Game, moduleId: ModuleId | null, discard?: ModuleRef): boolean {
   const s = g.supplyQueue[0];
   if (!s) return false;
   if (moduleId) {
-    const target = slot ?? g.slots.indexOf(null);
-    if (target < 0 || target >= g.slots.length) return false;
-    const old = g.slots[target];
-    if (old) log(g, `모듈 폐기: ${MODULES[old].name}`);
-    g.slots[target] = moduleId;
-    log(g, `모듈 설치: ${MODULES[moduleId].name}`, 'good');
+    if (heldCount(g) >= capacity(g)) {
+      const old = discard && ('slot' in discard ? g.slots[discard.slot] : g.hand[discard.hand]);
+      if (!discard || !old) return false;
+      if ('slot' in discard) g.slots[discard.slot] = null;
+      else g.hand.splice(discard.hand, 1);
+      log(g, `모듈 폐기: ${MODULES[old].name}`);
+    }
+    g.hand.push(moduleId);
+    log(g, `모듈 획득: ${MODULES[moduleId].name} (손에 들었다)`, 'good');
   } else {
     log(g, '보급을 건너뛰었다.');
   }
@@ -251,6 +263,27 @@ export function useModule(g: Game, slot: number): boolean {
   g.slots[slot] = null;
   if (id === 'boric') g.boronRho = -0.015;
   resolveCause(g, def.fixes, def.name);
+  return true;
+}
+
+/** 손의 모듈을 슬롯에 끼운다. 슬롯에 이미 있으면 서로 바꾼다 (바꾸기는 UI가 일시정지 중에만 허용) */
+export function installModule(g: Game, handIndex: number, slot: number): boolean {
+  const id = g.hand[handIndex];
+  if (!id || g.ending || slot < 0 || slot >= g.slots.length) return false;
+  const old = g.slots[slot];
+  if (old) g.hand[handIndex] = old;
+  else g.hand.splice(handIndex, 1);
+  g.slots[slot] = id;
+  log(g, `모듈 설치: ${MODULES[id].name}`, 'good');
+  return true;
+}
+
+/** 끼운 모듈을 빼서 손으로 돌려놓는다 (UI가 일시정지 여부를 확인한다) */
+export function uninstallModule(g: Game, slot: number): boolean {
+  const id = g.slots[slot];
+  if (!id || g.ending) return false;
+  g.slots[slot] = null;
+  g.hand.push(id);
   return true;
 }
 

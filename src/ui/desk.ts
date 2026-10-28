@@ -2,7 +2,8 @@
 import { Container, Graphics, Sprite, type FederatedPointerEvent, type FederatedWheelEvent, type Text, type Texture } from 'pixi.js';
 import { CATEGORY_NAME, MODULES, type ModuleId } from '../sim/data';
 import {
-  LEVER_NOTCHES, SLOT_COLS, abandon, scram, setLever, setPump, setValve, useModule, type Game,
+  LEVER_NOTCHES, SLOT_COLS, abandon, capacity, installModule, scram, setLever, setPump, setValve, uninstallModule, useModule,
+  type Game, type ModuleRef,
 } from '../sim/game';
 import { C, CATEGORY_COLOR, H, WALL_H, W, label } from './theme';
 
@@ -27,9 +28,14 @@ const ABANDON_BOX = { x: 212, y: 577, w: 112, h: 31 };
 /** Π자(거꾸로 뒤집은 U자) 손잡이: 상자 위로 rise만큼 솟고, 85% 이상 끌어내리면 포기. legs = 기둥 간격의 절반 */
 const PULL_HANDLE = { x: ABANDON_BOX.x + ABANDON_BOX.w / 2, base: ABANDON_BOX.y + 4, rise: 34, legs: 30 };
 
+/** 손에 든 모듈: 책상 아래 띠에 작은 카드로 늘어놓는다 (최대 8장) */
+const HAND = { x: 212, y: 656, w: 100, h: 56, gap: 8 };
+const HAND_TRAY = { x: HAND.x - 8, y: HAND.y - 6, w: 8 * (HAND.w + HAND.gap) + 8, h: HAND.h + 12 };
+
 const DIAL_MIN = -225 * Math.PI / 180, DIAL_MAX = 45 * Math.PI / 180;
 
-type Drag = { kind: 'lever' } | { kind: 'dial' } | { kind: 'wheel'; last: number } | { kind: 'slot'; from: number } | { kind: 'handle'; startY: number }
+type Drag = { kind: 'lever' } | { kind: 'dial' } | { kind: 'wheel'; last: number } | { kind: 'handle'; startY: number }
+  | { kind: 'slot' | 'hand'; from: number; startX: number; startY: number; moved: boolean }
   | { kind: 'abandon'; side: 'L' | 'R'; startY: number; moved: boolean };
 
 /** 책상 부품 아트 (docs/art-prompts.md 2-2 ~ 2-6). 없는 것은 임시 그래픽 */
@@ -37,9 +43,9 @@ export interface DeskParts { rodHandle?: Texture; wheel?: Texture }
 
 export interface DeskHooks {
   isPaused(): boolean;
-  /** 보급 교체 모드: 슬롯을 고르면 그 자리에 새 모듈을 꽂는다 */
+  /** 보급 교체 모드: 자리가 꽉 찼을 때 버릴 모듈(슬롯 또는 손)을 고른다 */
   replacing(): boolean;
-  onReplace(slot: number): void;
+  onReplace(ref: ModuleRef): void;
   hover(text: string): void;
 }
 
@@ -47,6 +53,13 @@ export function slotRect(i: number) {
   const r = Math.floor(i / SLOT_COLS), c = i % SLOT_COLS;
   return { x: SLOT.xs[c] - SLOT.w / 2, y: SLOT.ys[r] - SLOT.h / 2, w: SLOT.w, h: SLOT.h };
 }
+
+export function handRect(i: number) {
+  return { x: HAND.x + i * (HAND.w + HAND.gap), y: HAND.y, w: HAND.w, h: HAND.h };
+}
+
+const inside = (p: { x: number; y: number }, r: { x: number; y: number; w: number; h: number }) =>
+  p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h;
 
 export class Desk extends Container {
   scramCoverOpen = false;
@@ -66,6 +79,10 @@ export class Desk extends Container {
   private dyn = new Graphics();
   private slotLayer = new Container();
   private slotTexts: Text[] = [];
+  private handTexts: Text[] = [];
+  /** 끌고 있는 모듈 카드 (맨 위에 그린다) */
+  private ghost = new Graphics();
+  private ghostText: Text;
   private texts: Record<string, Text> = {};
   /** 책상 아트(desk_bg.png)가 들어오면 숨기는 임시 책상 */
   private placeholder = new Graphics();
@@ -80,6 +97,8 @@ export class Desk extends Container {
     const first = slotRect(0), last = slotRect(7);
     bg.roundRect(first.x - 14, first.y - 14, last.x + last.w - first.x + 28, last.y + last.h - first.y + 28, 8).fill(C.wallDark);
     this.addChild(bg, this.dyn, this.slotLayer);
+    this.ghostText = label('', 13, C.text, { align: 'center' });
+    this.ghostText.anchor.set(0.5);
 
     const t = (key: string, s: string, x: number, y: number, size = 13, fill: number = C.textDim) => {
       const tx = label(s, size, fill);
@@ -97,9 +116,10 @@ export class Desk extends Container {
     t('wheel', '', 1066, 580, 13, C.amber);
     t('abandonL', '포기', 18, 616, 12);
     t('abandonR', '포기', 1232, 616, 12);
-    t('info', '', 404, 622, 13, C.text);
+    t('info', '', 340, 612, 13, C.text);
     this.texts.info.style.wordWrap = true;
-    this.texts.info.style.wordWrapWidth = 480;
+    this.texts.info.style.wordWrapWidth = 560;
+    t('handCount', '', HAND_TRAY.x + HAND_TRAY.w + 10, HAND.y + 4, 12, C.amber);
 
     for (let i = 0; i < 8; i++) {
       const r = slotRect(i);
@@ -113,7 +133,25 @@ export class Desk extends Container {
       const tx = label('', 13, C.text, { align: 'center', wordWrap: true, wordWrapWidth: r.w - 8 });
       tx.anchor.set(0.5);
       tx.position.set(r.x + r.w / 2, r.y + r.h / 2 + 8);
+      // 글자가 슬롯 클릭을 가로채지 않게 한다 (글자가 있는 칸은 클릭이 안 먹던 문제)
+      tx.eventMode = 'none';
       this.slotTexts.push(tx);
+      this.slotLayer.addChild(hit, tx);
+    }
+    for (let i = 0; i < 8; i++) {
+      const r = handRect(i);
+      const hit = new Graphics().rect(0, 0, r.w, r.h).fill({ color: 0, alpha: 0.001 });
+      hit.position.set(r.x, r.y);
+      hit.eventMode = 'static';
+      hit.cursor = 'pointer';
+      hit.on('pointerdown', (e) => this.handDown(i, e));
+      hit.on('pointerover', () => this.handHover(i));
+      hit.on('pointerout', () => this.hooks.hover(''));
+      const tx = label('', 12, C.text, { align: 'center' });
+      tx.anchor.set(0.5);
+      tx.position.set(r.x + r.w / 2, r.y + r.h / 2 + 8);
+      tx.eventMode = 'none';
+      this.handTexts.push(tx);
       this.slotLayer.addChild(hit, tx);
     }
 
@@ -130,6 +168,10 @@ export class Desk extends Container {
       if (this.handleRise < 0.95 || this.handleLocked) return;
       this.drag = { kind: 'handle', startY: this.toLocal(e.global).y - this.handlePull };
     }, 'Π자 손잡이: 끝까지 끌어내리면 운전원은 대피하고 원자로는 폭발한다. 발전량 몰수, 이후 체포.');
+
+    this.addChild(this.ghost, this.ghostText);
+    this.ghost.eventMode = 'none';
+    this.ghostText.eventMode = 'none';
 
     this.eventMode = 'static';
     this.on('globalpointermove', (e) => { this.lastPos = this.toLocal(e.global); this.dragMove(e); });
@@ -181,6 +223,8 @@ export class Desk extends Container {
     } else if (this.drag.kind === 'abandon') {
       if (Math.abs(p.y - this.drag.startY) > 4) this.drag.moved = true;
       if (this.drag.moved) this.abandonPos[this.drag.side] = Math.max(0, Math.min(1, (p.y - ABANDON_SPAN.top) / (ABANDON_SPAN.bottom - ABANDON_SPAN.top)));
+    } else if (this.drag.kind === 'slot' || this.drag.kind === 'hand') {
+      if (Math.hypot(p.x - this.drag.startX, p.y - this.drag.startY) > 6) this.drag.moved = true;
     } else if (this.drag.kind === 'handle') {
       this.handlePull = Math.max(0, Math.min(PULL_HANDLE.rise, p.y - this.drag.startY));
       // 끝까지 내려야만 걸리고 포기가 실행된다
@@ -198,26 +242,31 @@ export class Desk extends Container {
       // 그냥 누르면 반대쪽 끝으로, 끌었으면 가까운 끝으로 걸린다
       this.abandonPulled[side] = this.drag.moved ? this.abandonPos[side] > 0.5 : !this.abandonPulled[side];
     }
-    if (this.drag?.kind === 'slot') {
-      const p = this.lastPos;
-      const to = [...Array(8).keys()].find((i) => {
-        const r = slotRect(i);
-        return p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h;
-      });
-      const g = this.g();
+    const g = this.g();
+    const p = this.lastPos;
+    const to = [...Array(8).keys()].find((i) => inside(p, slotRect(i)));
+    if (this.drag?.kind === 'slot' && this.drag.moved) {
+      // 일시정지 중: 다른 슬롯으로 옮기거나, 손으로 빼 놓는다
       if (to !== undefined && to !== this.drag.from) {
         [g.slots[this.drag.from], g.slots[to]] = [g.slots[to], g.slots[this.drag.from]];
+      } else if (inside(p, HAND_TRAY)) {
+        uninstallModule(g, this.drag.from);
       }
+    }
+    if (this.drag?.kind === 'hand') {
+      // 끌어서 놓은 슬롯에 끼운다. 그냥 누르면 첫 빈 슬롯에. 차 있는 슬롯과 바꾸기는 일시정지 중에만
+      const target = this.drag.moved ? to : g.slots.indexOf(null);
+      if (target !== undefined && target >= 0 && (!g.slots[target] || this.hooks.isPaused())) installModule(g, this.drag.from, target);
     }
     this.drag = null;
   }
 
   private slotDown(i: number) {
     const g = this.g();
-    if (this.hooks.replacing()) { this.hooks.onReplace(i); return; }
+    if (this.hooks.replacing()) { if (g.slots[i]) this.hooks.onReplace({ slot: i }); return; }
     if (this.hooks.isPaused()) {
-      // 재배치는 일시정지 중에만 (GDD 8.6)
-      if (g.slots[i]) this.drag = { kind: 'slot', from: i };
+      // 재배치·빼기는 일시정지 중에만 (GDD 8.6)
+      if (g.slots[i]) this.drag = { kind: 'slot', from: i, startX: this.lastPos.x, startY: this.lastPos.y, moved: false };
       return;
     }
     useModule(g, i);
@@ -225,8 +274,23 @@ export class Desk extends Container {
 
   private slotHover(i: number) {
     const id = this.g().slots[i];
-    if (!id) { this.hooks.hover('빈 슬롯'); return; }
+    if (!id) { this.hooks.hover('빈 슬롯 — 손에 든 모듈을 끌어다 끼운다'); return; }
     this.hooks.hover(moduleTip(id));
+  }
+
+  private handDown(i: number, e: FederatedPointerEvent) {
+    const g = this.g();
+    if (!g.hand[i] || g.ending) return;
+    if (this.hooks.replacing()) { this.hooks.onReplace({ hand: i }); return; }
+    const p = this.toLocal(e.global);
+    this.lastPos = p;
+    this.drag = { kind: 'hand', from: i, startX: p.x, startY: p.y, moved: false };
+  }
+
+  private handHover(i: number) {
+    const id = this.g().hand[i];
+    if (!id) return;
+    this.hooks.hover(`(손) ${moduleTip(id)}  — 슬롯으로 끌어다 끼운다 (누르면 빈 슬롯에)`);
   }
 
   setInfo(text: string) { this.texts.info.text = text; }
@@ -369,26 +433,70 @@ export class Desk extends Container {
     }
 
     // 모듈 슬롯
+    const blink = Math.floor(now / 300) % 2 ? C.amber : C.red;
     for (let i = 0; i < 8; i++) {
       const r = slotRect(i);
       const id = g.slots[i];
       // 아트가 있으면 빈 소켓은 그림 그대로 둔다
       if (!this.hasArt) d.roundRect(r.x, r.y, r.w, r.h, 6).fill(0x140806).stroke({ width: 2, color: 0x4a2a20 });
-      if (id) {
+      const dragged = this.drag?.kind === 'slot' && this.drag.moved && this.drag.from === i;
+      if (id && !dragged) {
         const def = MODULES[id];
-        const col = CATEGORY_COLOR[def.category];
-        d.roundRect(r.x + 5, r.y + 5, r.w - 10, r.h - 10, 5).fill(0x2a1a14).stroke({ width: 3, color: col });
-        d.rect(r.x + 5, r.y + 5, r.w - 10, 16).fill(col);
-        if (def.category === 'risky') for (let k = 0; k < r.w - 10; k += 12) d.rect(r.x + 5 + k, r.y + 5, 6, 16).fill(C.black);
+        card(d, r.x + 5, r.y + 5, r.w - 10, r.h - 10, id);
         // 노심 한계 측정기는 이번 판의 멜트다운 지점을 카드 위에 보여 준다
         const extra = def.fixes ? '\n[클릭: 사용]' : id === 'coreLimit' ? `\n한계 ${g.meltPoint.toFixed(0)}%` : '';
         this.slotTexts[i].text = `${CATEGORY_NAME[def.category]}\n${def.short}${extra}`;
       } else {
         this.slotTexts[i].text = '';
       }
-      if (this.hooks.replacing()) d.roundRect(r.x, r.y, r.w, r.h, 6).stroke({ width: 3, color: Math.floor(now / 300) % 2 ? C.amber : C.red });
+      if (this.hooks.replacing() && id) d.roundRect(r.x, r.y, r.w, r.h, 6).stroke({ width: 3, color: blink });
+      // 손의 모듈을 끄는 중: 끼울 수 있는 슬롯을 표시
+      if (this.drag?.kind === 'hand' && this.drag.moved && (!id || this.hooks.isPaused())) {
+        d.roundRect(r.x, r.y, r.w, r.h, 6).stroke({ width: 3, color: inside(this.lastPos, r) ? C.green : C.amber });
+      }
+    }
+
+    // 손에 든 모듈
+    const dragHand = this.drag?.kind === 'slot' && this.drag.moved;
+    d.roundRect(HAND_TRAY.x, HAND_TRAY.y, HAND_TRAY.w, HAND_TRAY.h, 6).fill({ color: C.black, alpha: 0.55 })
+      .stroke({ width: 2, color: dragHand && inside(this.lastPos, HAND_TRAY) ? C.green : dragHand ? C.amber : 0x4a2a20 });
+    for (let i = 0; i < 8; i++) {
+      const r = handRect(i);
+      const id = g.hand[i];
+      const dragged = this.drag?.kind === 'hand' && this.drag.moved && this.drag.from === i;
+      if (id && !dragged) {
+        card(d, r.x, r.y, r.w, r.h, id);
+        this.handTexts[i].text = MODULES[id].short;
+        if (this.hooks.replacing()) d.roundRect(r.x - 3, r.y - 3, r.w + 6, r.h + 6, 6).stroke({ width: 3, color: blink });
+      } else {
+        this.handTexts[i].text = '';
+      }
+    }
+    const installed = g.slots.filter(Boolean).length;
+    this.texts.handCount.text = `손 ${g.hand.length}\n설치 ${installed}\n최대 ${capacity(g)}`;
+
+    // 끌고 있는 카드
+    const gd = this.ghost.clear();
+    this.ghostText.text = '';
+    if ((this.drag?.kind === 'hand' || this.drag?.kind === 'slot') && this.drag.moved) {
+      const id = this.drag.kind === 'hand' ? g.hand[this.drag.from] : g.slots[this.drag.from];
+      if (id) {
+        const { x, y } = this.lastPos;
+        card(gd, x - HAND.w / 2, y - HAND.h / 2, HAND.w, HAND.h, id);
+        this.ghostText.text = MODULES[id].short;
+        this.ghostText.position.set(x, y + 8);
+      }
     }
   }
+}
+
+/** 모듈 카드: 계통 색 테두리 + 위쪽 색 띠 (고위험은 줄무늬) */
+function card(d: Graphics, x: number, y: number, w: number, h: number, id: ModuleId) {
+  const def = MODULES[id];
+  const col = CATEGORY_COLOR[def.category];
+  d.roundRect(x, y, w, h, 5).fill(0x2a1a14).stroke({ width: 3, color: col });
+  d.rect(x, y, w, 16).fill(col);
+  if (def.category === 'risky') for (let k = 0; k < w; k += 12) d.rect(x + k, y, 6, 16).fill(C.black);
 }
 
 export function moduleTip(id: ModuleId): string {
