@@ -1,5 +1,5 @@
 // 벽면 콘솔 = 보는 것: 위험도 게이지, CRT, 경고등, 계기 (GDD 12장 화면 구도)
-import { Container, Graphics, type Text } from 'pixi.js';
+import { Container, Graphics, Sprite, type Text, type Texture } from 'pixi.js';
 import { CRTFilter, GlowFilter } from 'pixi-filters';
 import { CAUSES, EQUIPMENT_NAME, FAILURE_CAUSE, type Equipment } from '../sim/data';
 import { STAGE_NAME, STAGE_NAME_KO, has, hasCause, type Game } from '../sim/game';
@@ -28,18 +28,22 @@ export class Wall extends Container {
   private lamps: { e: Equipment; g: Graphics; t: Text }[] = [];
   private readouts: Record<string, Text> = {};
   private stableText: Text;
+  /** 벽면 아트(wall_bg.png)가 들어오면 숨기는 임시 그래픽: 벽, 오목한 자리 테두리 */
+  private placeholder = new Graphics();
 
   constructor() {
     super();
-    const bg = new Graphics()
+    const ph = this.placeholder
       .rect(0, 0, W, WALL_H).fill(C.wall)
       .rect(0, WALL_H - 8, W, 8).fill(C.wallDark);
-    for (let x = 0; x < W; x += 64) bg.rect(x, 0, 2, WALL_H).fill(C.wallDark);
-    this.addChild(bg);
+    for (let x = 0; x < W; x += 64) ph.rect(x, 0, 2, WALL_H).fill(C.wallDark);
+    ph.roundRect(20, 40, 300, 260, 10).fill(C.wallDark)   // 게이지 자리
+      .roundRect(340, 20, 600, 300, 18).fill(C.metalDark) // CRT 자리
+      .roundRect(960, 20, 300, 300, 10).fill(C.wallDark); // 경고등·계기 자리
+    this.addChild(ph);
 
     // 위험도 게이지
     const face = new Graphics()
-      .roundRect(20, 40, 300, 260, 10).fill(C.wallDark)
       .roundRect(30, 50, 280, 240, 8).fill(0xe8b07a);
     const zones: [number, number, number][] = [[0, 40, C.green], [40, 75, C.yellow], [75, 100, C.red]];
     const zone = (a: number, b: number, color: number) => {
@@ -66,7 +70,6 @@ export class Wall extends Container {
 
     // CRT
     const bezel = new Graphics()
-      .roundRect(340, 20, 600, 300, 18).fill(C.metalDark)
       .roundRect(356, 34, 568, 272, 14).fill(C.crt);
     this.addChild(bezel);
     this.crt.position.set(356, 34);
@@ -80,8 +83,6 @@ export class Wall extends Container {
     this.addChild(this.crt);
 
     // 오른쪽: 경고등 + 디지털 계기 (2000 단계 = 디지털 표시)
-    const panel = new Graphics().roundRect(960, 20, 300, 300, 10).fill(C.wallDark);
-    this.addChild(panel);
     (['pump', 'turbine', 'sg', 'rodDrive'] as Equipment[]).forEach((e, i) => {
       const g = new Graphics();
       g.position.set(990 + i * 70, 50);
@@ -104,6 +105,14 @@ export class Wall extends Container {
     this.stableText = label('', 12, C.green);
     this.stableText.position.set(980, 300);
     this.addChild(this.stableText);
+  }
+
+  /** 벽면 아트 적용: 원본 640×170을 2배로 깔고 임시 벽을 숨긴다 (docs/art-prompts.md 1-1) */
+  useBackground(texture: Texture) {
+    const bg = new Sprite(texture);
+    bg.scale.set(W / texture.width);
+    this.addChildAt(bg, 0);
+    this.placeholder.visible = false;
   }
 
   update(g: Game, dt: number, now: number) {

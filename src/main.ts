@@ -1,4 +1,4 @@
-import { Application } from 'pixi.js';
+import { Application, Texture } from 'pixi.js';
 import { DT, newGame, setLever, setPump, setValve, step, takeSupply, type Game } from './sim/game';
 import type { ModuleDef } from './sim/data';
 import { Desk } from './ui/desk';
@@ -37,6 +37,17 @@ const pauseBanner = new PauseBanner();
 const ending = new EndingOverlay(restart);
 const title = new TitleOverlay(() => { started = true; title.visible = false; });
 app.stage.addChild(wall, desk, pauseBanner, supply, ending, title);
+
+/** public/art/ 의 픽셀아트 불러오기. <img>로 읽어야 Electron(file://)에서도 동작한다. 없으면 임시 그래픽 유지 */
+async function loadArt(name: string): Promise<Texture> {
+  const img = new Image();
+  img.src = `art/${name}`;
+  await img.decode();
+  const texture = Texture.from(img);
+  texture.source.scaleMode = 'nearest';
+  return texture;
+}
+loadArt('wall_bg.png').then((t) => wall.useBackground(t)).catch(() => console.warn('wall_bg.png 없음 — 임시 그래픽 사용'));
 
 function pickSupply(m: ModuleDef) {
   const empty = game.slots.indexOf(null);

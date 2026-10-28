@@ -304,7 +304,7 @@ A wide cinematic pixel art scene, aspect ratio 16:9: <그림 설명>.
 
 ## 4. 체크리스트
 
-- [ ] 벽면 배경으로 스타일 확정
+- [x] 벽면 배경으로 스타일 확정 (`public/art/wall_bg.png`, 게임에 적용됨)
 - [ ] 위험도 게이지 판·바늘
 - [ ] CRT 테두리
 - [ ] 경고등 3종, 계기 판넬
