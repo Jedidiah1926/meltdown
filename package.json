@@ -1,6 +1,6 @@
 {
   "name": "meltdown",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "type": "module",
   "description": "원자로 안정화 로그라이크 — 프로토타입",
