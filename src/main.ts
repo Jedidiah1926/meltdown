@@ -1,5 +1,5 @@
 import { Application, Texture } from 'pixi.js';
-import { DT, newGame, setLever, setPump, setValve, step, takeSupply, type Game } from './sim/game';
+import { DT, capacity, heldCount, newGame, setLever, setPump, setValve, step, takeSupply, type Game } from './sim/game';
 import type { ModuleDef } from './sim/data';
 import { Desk } from './ui/desk';
 import { Evacuation, EVAC } from './ui/evacuation';
@@ -34,7 +34,7 @@ const supply = new SupplyOverlay(pickSupply, () => { takeSupply(game, null); sup
 const desk = new Desk(() => game, {
   isPaused: () => paused,
   replacing: () => !!supply.pendingReplace,
-  onReplace: (slot) => { takeSupply(game, supply.pendingReplace!.id, slot); supply.pendingReplace = null; },
+  onReplace: (ref) => { if (takeSupply(game, supply.pendingReplace!.id, ref)) supply.pendingReplace = null; },
   hover: (text) => desk.setInfo(text),
 });
 const pauseBanner = new PauseBanner();
@@ -65,8 +65,8 @@ Promise.all(['off', 'amber', 'red', 'green'].map((k) => loadArt(`lamp_${k}.png`)
   .catch(() => console.warn('경고등 아트 없음 — 임시 그래픽 사용'));
 
 function pickSupply(m: ModuleDef) {
-  const empty = game.slots.indexOf(null);
-  if (empty >= 0) takeSupply(game, m.id, empty);
+  // 고른 모듈은 손으로 온다. 끼운 것 + 손에 든 것이 최대면 하나를 버려야 한다
+  if (heldCount(game) < capacity(game)) takeSupply(game, m.id);
   else supply.pendingReplace = m;
 }
 
@@ -116,6 +116,7 @@ if (new URLSearchParams(location.search).has('debug')) {
   Object.assign(window, {
     __md: {
       get game() { return game; },
+      desk, app,
       forward(seconds: number) { for (let t = 0; t < seconds && !game.ending && !game.supplyQueue.length; t += DT) step(game, DT); },
     },
   });

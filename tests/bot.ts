@@ -1,5 +1,7 @@
 import { MODULES } from '../src/sim/data';
-import { hasCause, scram, setLever, setPump, setValve, takeSupply, useModule, type Game } from '../src/sim/game';
+import {
+  capacity, hasCause, heldCount, installModule, scram, setLever, setPump, setValve, takeSupply, useModule, type Game,
+} from '../src/sim/game';
 
 const prevP = new WeakMap<Game, number>();
 
@@ -9,10 +11,11 @@ export function bot(g: Game) {
     const s = g.supplyQueue[0];
     const want = s.options.find((m) => m.fixes && hasCause(g, m.fixes))
       ?? s.options.find((m) => m.category !== 'fix' && m.category !== 'risky')
-      ?? s.options.find((m) => m.category === 'fix' && !g.slots.includes(m.id));
-    const empty = g.slots.indexOf(null);
-    if (want && empty >= 0) takeSupply(g, want.id, empty); else takeSupply(g, null);
+      ?? s.options.find((m) => m.category === 'fix' && !g.slots.includes(m.id) && !g.hand.includes(m.id));
+    if (want && heldCount(g) < capacity(g)) takeSupply(g, want.id); else takeSupply(g, null);
   }
+  // 손에 든 모듈은 빈 슬롯에 바로 끼운다
+  while (g.hand.length && g.slots.includes(null)) installModule(g, 0, g.slots.indexOf(null));
   g.slots.forEach((id, i) => { if (id && MODULES[id].fixes && hasCause(g, MODULES[id].fixes!)) useModule(g, i); });
 
   const sg = hasCause(g, 'sgFouling');

@@ -1,7 +1,7 @@
 // 시작 화면, 보급 선택, 일시정지, 결말 연출
 import { Container, Graphics, type Text } from 'pixi.js';
 import { CATEGORY_NAME, type ModuleDef } from '../sim/data';
-import type { EndingKind, Game } from '../sim/game';
+import { capacity, heldCount, type EndingKind, type Game } from '../sim/game';
 import { C, CATEGORY_COLOR, H, W, label } from './theme';
 import { fmtTime } from './wall';
 
@@ -34,7 +34,8 @@ export class TitleOverlay extends Container {
       '점수는 발전량. 위험도가 눈금 밖 어딘가(멜트다운 지점)에 닿으면 끝.',
       '',
       '제어봉 레버 Q/A · 냉각 펌프 W/S · 터빈 밸브 E/D · SCRAM X(두 번: 덮개 → 버튼)',
-      '해결 모듈은 슬롯을 클릭해서 사용 · Space 일시정지 (일시정지 중 모듈 드래그로 재배치)',
+      '모듈 3개를 손에 들고 시작 → 책상 아래 손에서 슬롯으로 끌어 끼운다 (언제든) · 해결 모듈은 끼운 뒤 클릭해서 사용',
+      'Space 일시정지 (일시정지 중에는 끼운 모듈을 옮기거나 손으로 빼 놓을 수 있다)',
       '포기: 책상 양 끝 레버 두 개를 내리면 SCRAM 아래에서 Π자 손잡이가 솟는다 → 끌어내리기',
     ].join('\n'), 15, C.text, { align: 'center', lineHeight: 24 });
     help.anchor.set(0.5, 0);
@@ -46,14 +47,17 @@ export class TitleOverlay extends Container {
 export class SupplyOverlay extends Container {
   private body = new Container();
   private banner: Text;
+  private bannerBg = new Graphics();
   /** 슬롯이 꽉 차서 교체할 자리를 고르는 중인 모듈 */
   pendingReplace: ModuleDef | null = null;
 
   constructor(private onPick: (m: ModuleDef) => void, private onSkip: () => void) {
     super();
     this.banner = label('', 18, C.amber);
-    this.banner.position.set(410, 352);
-    this.addChild(this.body, this.banner);
+    this.banner.anchor.set(0.5);
+    this.banner.position.set(W / 2, 360);
+    this.bannerBg.eventMode = 'none';
+    this.addChild(this.body, this.bannerBg, this.banner);
     this.visible = false;
   }
 
@@ -62,9 +66,12 @@ export class SupplyOverlay extends Container {
     this.visible = !!s;
     this.body.removeChildren();
     this.banner.text = '';
+    this.bannerBg.clear();
     if (!s) return;
     if (this.pendingReplace) {
-      this.banner.text = `슬롯이 꽉 찼다 — "${this.pendingReplace.name}"으로 교체할 모듈을 고르세요 (ESC: 취소)`;
+      this.banner.text = `자리가 꽉 찼다 — "${this.pendingReplace.name}" 대신 버릴 모듈 선택 (ESC 취소)`;
+      const w = this.banner.width + 32;
+      this.bannerBg.clear().rect(W / 2 - w / 2, 342, w, 36).fill({ color: C.black, alpha: 0.8 });
       return;
     }
     this.body.addChild(new Graphics().rect(0, 0, W, H).fill({ color: C.black, alpha: 0.75 }));
@@ -96,7 +103,7 @@ export class SupplyOverlay extends Container {
       this.body.addChild(card);
     });
     this.body.addChild(button('건너뛰기', W / 2 - 80, 510, 160, 44, this.onSkip));
-    const hint = label(`빈 슬롯 ${g.slots.filter((x) => !x).length}개 · 보급을 고르는 동안 시간은 멈춘다`, 14, C.textDim);
+    const hint = label(`남은 자리 ${capacity(g) - heldCount(g)}개 (끼운 것 + 손에 든 것 ≤ ${capacity(g)}) · 고른 모듈은 손으로 온다 · 보급을 고르는 동안 시간은 멈춘다`, 14, C.textDim);
     hint.anchor.set(0.5, 0);
     hint.position.set(W / 2, 570);
     this.body.addChild(hint);
@@ -107,7 +114,7 @@ export class PauseBanner extends Container {
   constructor() {
     super();
     this.addChild(new Graphics().rect(0, 0, W, 34).fill({ color: C.black, alpha: 0.7 }));
-    const t = label('일시정지 [Space] — 모듈을 드래그해서 재배치할 수 있다', 18, C.amber);
+    const t = label('일시정지 [Space] — 끼운 모듈을 끌어서 옮기거나 손으로 빼 놓을 수 있다', 18, C.amber);
     t.anchor.set(0.5);
     t.position.set(W / 2, 17);
     this.addChild(t);
