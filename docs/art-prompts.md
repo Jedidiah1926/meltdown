@@ -222,18 +222,16 @@ A rusty red industrial valve handwheel seen straight from the front: an outer ri
 and a round metal hub in the center. Perfectly rotationally symmetric. Transparent background.
 ```
 
-### 2-6. 포기 장치 — `abandon_lever_up.png`, `abandon_lever_down.png`, `abandon_box.png`, `abandon_cover.png`
+### 2-6. 포기 장치 — `abandon_lever_up.png`, `abandon_lever_down.png`, `abandon_t_lever.png`
 
-- 레버: 각 **20×76**, 상자: **70×22**, 덮개: **70×22**, 투명 배경
-- 레버 두 개(좌우)는 같은 이미지를 쓴다. 당기면 손잡이가 아래로 내려가고 빨갛게 된다.
+- 좌우 레버: 각 **20×76**, 투명 배경 (**적용됨**)
+- **T자 레버** `abandon_t_lever.png`: **34×20**, 투명 배경. 좌우 레버를 모두 내리면 SCRAM 아래 상자에서 솟아오르고, 끌어내리면 포기가 실행된다. 게임에서 위아래로 움직이므로 **손잡이(가로 막대)와 짧은 축만** 그린다. 축 아래쪽 끝은 상자 속으로 들어가는 부분이라 잘려 있어도 된다.
+- 지금은 T자 레버가 임시 그래픽(빨간 막대)으로 나온다.
 
 ```
 [공통 스타일 블록]
-Separate objects on a transparent background:
-(1) a tall vertical pull lever in a narrow black slot, grey metal handle at the top position;
-(2) the same lever pulled down, handle at the bottom position, handle painted alarm red;
-(3) a small wide black box with a yellow hazard border containing one small round red button;
-(4) a transparent light-blue safety cover that fits exactly over that small box.
+A T-shaped emergency pull handle seen straight from the front: a thick horizontal grip bar painted alarm red with worn black rubber ends,
+mounted on top of a short vertical steel shaft that goes straight down. Isolated object, transparent background, nothing else.
 ```
 
 ### 2-7. 모듈 슬롯 — `slot_empty.png`, `slot_blocked.png`
@@ -344,7 +342,9 @@ A wide cinematic pixel art scene, aspect ratio 16:9: <그림 설명>.
 - [ ] 계기 판넬
 - [x] 책상 상판 1차 (게임에 적용됨, 슬롯·포기 레버 위치를 그림에 맞춤)
 - [x] 책상 상판 2차: 조작 장치 받침까지 그려 넣은 버전 (게임에 적용됨. 세밀한 그림이라 640×190 대신 1280×380으로 줄여 쓰고, 레버·버튼·다이얼·휠·슬롯 위치를 그림에 맞춤)
-- [ ] 제어봉 레버, SCRAM, 펌프 다이얼, 터빈 휠, 포기 장치
+- [x] 제어봉 손잡이, 터빈 휠, 포기 좌우 레버 (게임에 적용됨)
+- [ ] SCRAM 버튼·눌린 버튼, 펌프 손잡이: **잘림 문제로 다시 잘라야 함** (SCRAM 버튼은 오른쪽이 잘리고 하우징 조각이 붙음, 펌프 손잡이는 양옆이 잘림). 원본 큰 이미지를 올리면 다시 자른다
+- [ ] SCRAM 덮개, 포기 T자 레버 (2-3, 2-6)
 - [ ] 슬롯 2종, 모듈 카트리지 6종, 아이콘 13종
 - [ ] 대피 상반신 그림자 (지금은 임시 그래픽)
 - [ ] (선택) 결말 일러스트 4종
