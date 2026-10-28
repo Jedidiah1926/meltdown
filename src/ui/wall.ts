@@ -8,6 +8,8 @@ import { C, WALL_H, W, label } from './theme';
 const GAUGE = { x: 170, y: 215, r: 120 };
 const GAUGE_MAX = 150;
 
+export interface LampTextures { off: Texture; amber: Texture; red: Texture; green: Texture }
+
 /** 게이지 판 아트(gauge_face.png)에서 측정한 값. 원본 픽셀 좌표, 각도는 화면 기준(y 아래) 도 단위 */
 const ART_FACE = { x: 20, y: 40, scale: 2, pivotX: 74.5, pivotY: 92 };
 const ART_NEEDLE_PIVOT = { x: 3, y: 59 };
@@ -43,7 +45,8 @@ export class Wall extends Container {
   private crtLog: Text;
   private crtFilter: CRTFilter;
   private history: number[] = [];
-  private lamps: { e: Equipment; g: Graphics; t: Text }[] = [];
+  private lamps: { e: Equipment; g: Graphics; t: Text; sprite?: Sprite }[] = [];
+  private lampTex: LampTextures | null = null;
   private readouts: Record<string, Text> = {};
   private stableText: Text;
   /** 벽면 아트(wall_bg.png)가 들어오면 숨기는 임시 그래픽: 벽, 오목한 자리 테두리 */
@@ -152,6 +155,28 @@ export class Wall extends Container {
     this.gaugeText.position.set(30, 304);
   }
 
+  /** CRT 테두리 아트 (docs/art-prompts.md 1-4). 화면 구멍(8,7, 284×136)이 CRT 내용 영역과 맞는다 */
+  useCrtBezel(texture: Texture) {
+    const b = new Sprite(texture);
+    b.position.set(340, 20);
+    b.scale.set(2);
+    this.addChildAt(b, this.getChildIndex(this.crt) + 1);
+  }
+
+  /** 경고등 아트 (docs/art-prompts.md 1-5). 정상 초록, 고장 징후 주황 깜빡임, 고장 빨강 */
+  useLamps(tex: LampTextures) {
+    this.lampTex = tex;
+    for (const lamp of this.lamps) {
+      const sp = new Sprite(tex.green);
+      sp.anchor.set(0.5);
+      sp.scale.set(2);
+      sp.position.copyFrom(lamp.g.position);
+      this.addChildAt(sp, this.getChildIndex(lamp.g));
+      lamp.g.visible = false;
+      lamp.sprite = sp;
+    }
+  }
+
   update(g: Game, dt: number, now: number) {
     // 바늘: 실제 값을 반 박자 늦게 따라가고 떨린다 (GDD 3.4)
     this.needleValue += (g.risk - this.needleValue) * Math.min(1, dt * 1.8);
@@ -183,11 +208,16 @@ export class Wall extends Container {
 
     // 경고등: 내구도가 낮으면 깜빡임(고장 징후), 원인 발생 시 빨간 점등
     const blink = Math.floor(now / 300) % 2 === 0;
-    for (const { e, g: lamp, t } of this.lamps) {
+    for (const { e, g: lamp, t, sprite } of this.lamps) {
       const failed = hasCause(g, FAILURE_CAUSE[e]);
       const warn = g.dura[e] < 35;
-      const color = failed ? C.red : warn && blink ? C.amber : 0x3a2018;
-      lamp.clear().circle(0, 0, 13).fill(color).circle(0, 0, 13).stroke({ width: 2, color: C.metal });
+      if (sprite && this.lampTex) {
+        const lt = this.lampTex;
+        sprite.texture = failed ? lt.red : warn ? (blink ? lt.amber : lt.off) : lt.green;
+      } else {
+        const color = failed ? C.red : warn && blink ? C.amber : 0x3a2018;
+        lamp.clear().circle(0, 0, 13).fill(color).circle(0, 0, 13).stroke({ width: 2, color: C.metal });
+      }
       t.text = EQUIPMENT_NAME[e].replace(' ', '\n') + (has(g, 'diagnostics') ? `\n${g.dura[e].toFixed(0)}%` : '');
     }
 

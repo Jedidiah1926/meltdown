@@ -51,6 +51,10 @@ loadArt('wall_bg.png').then((t) => wall.useBackground(t)).catch(() => console.wa
 Promise.all([loadArt('gauge_face.png'), loadArt('gauge_needle.png')])
   .then(([face, needle]) => wall.useGauge(face, needle))
   .catch(() => console.warn('게이지 아트 없음 — 임시 그래픽 사용'));
+loadArt('crt_bezel.png').then((t) => wall.useCrtBezel(t)).catch(() => console.warn('crt_bezel.png 없음'));
+Promise.all(['off', 'amber', 'red', 'green'].map((k) => loadArt(`lamp_${k}.png`)))
+  .then(([off, amber, red, green]) => wall.useLamps({ off, amber, red, green }))
+  .catch(() => console.warn('경고등 아트 없음 — 임시 그래픽 사용'));
 
 function pickSupply(m: ModuleDef) {
   const empty = game.slots.indexOf(null);
