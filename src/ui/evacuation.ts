@@ -17,7 +17,7 @@ export const EVAC = {
 };
 
 /** 그림자 크기: 화면 아래쪽에 걸친 상반신 (머리 꼭대기 ~ 화면 아래 끝) */
-const SHADOW_H = 520;
+const SHADOW_H = 720;
 const SHADOW_ALPHA = 0.5;
 
 export class Evacuation extends Container {
@@ -84,7 +84,9 @@ export class Evacuation extends Container {
     const k = Math.max(0, Math.min(1, (t - EVAC.leaveStart) / (EVAC.leaveEnd - EVAC.leaveStart)));
     const e = k * k * (3 - 2 * k);
     const rise = Math.min(1, k * 4) * 26;
-    this.shadow.position.set(W * 0.5 + W * 0.62 * e, H + 40 - rise + Math.sin(t * 5) * 3 * k);
+    // 그림자 폭(어깨 너비 ≈ 높이)만큼 더 가야 화면 밖으로 완전히 빠져나간다
+    const travel = W * 0.5 + SHADOW_H * 0.5 + 40;
+    this.shadow.position.set(W * 0.5 + travel * e, H + 40 - rise + Math.sin(t * 5) * 3 * k);
     this.shadow.alpha = SHADOW_ALPHA * (1 - Math.max(0, (k - 0.6) / 0.4));
     this.shadow.visible = k < 1;
   }
