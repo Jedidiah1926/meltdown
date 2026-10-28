@@ -24,19 +24,51 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - name: 태그와 package.json 버전 일치 확인
-        if: github.event_name == 'push'
+      - name: 버전 확인
+        id: ver
         shell: bash
         run: |
-          version="v$(node -p "require('./package.json').version")"
-          if [ "$version" != "$GITHUB_REF_NAME" ]; then
-            echo "태그($GITHUB_REF_NAME)와 package.json 버전($version)이 다르다. npm version으로 올릴 것." >&2
+          tag="v$(node -p "require('./package.json').version")"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.event_name }}" = "push" ] && [ "$tag" != "$GITHUB_REF_NAME" ]; then
+            echo "태그($GITHUB_REF_NAME)와 package.json 버전($tag)이 다르다. npm version으로 올릴 것." >&2
             exit 1
           fi
+      - name: 같은 버전의 깨진 Release 정리 (설치 파일이 없는 것만)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.ver.outputs.tag }}
+        run: |
+          if assets=$(gh release view "$TAG" --json assets --jq '.assets[].name' 2>/dev/null); then
+            if echo "$assets" | grep -q '\.exe$'; then
+              echo "$TAG Release에 이미 설치 파일이 있다. 버전을 올려서 다시 실행할 것." >&2
+              exit 1
+            fi
+            echo "설치 파일이 없는 $TAG Release를 지우고 다시 만든다."
+            gh release delete "$TAG" --yes
+          fi
+      - name: 태그 만들기 (수동 실행일 때)
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        env:
+          TAG: ${{ steps.ver.outputs.tag }}
+        run: |
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null; then
+            git push origin ":refs/tags/$TAG"
+          fi
+          git tag "$TAG"
+          git push origin "$TAG"
       - run: npm ci
       - run: npm test
       - run: npm run build
-      - name: 설치 파일 빌드 + Release 업로드
+      - name: 설치 파일 빌드 + 초안 Release에 업로드
         run: npx electron-builder --win --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Release 공개
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.ver.outputs.tag }}
+        run: gh release edit "$TAG" --draft=false --latest
