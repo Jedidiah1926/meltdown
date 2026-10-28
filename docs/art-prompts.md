@@ -222,16 +222,18 @@ A rusty red industrial valve handwheel seen straight from the front: an outer ri
 and a round metal hub in the center. Perfectly rotationally symmetric. Transparent background.
 ```
 
-### 2-6. 포기 장치 — `abandon_lever_up.png`, `abandon_lever_down.png`, `abandon_t_lever.png`
+### 2-6. 포기 장치 — `abandon_lever_up.png`, `abandon_lever_down.png`, `abandon_pull_handle.png`
 
 - 좌우 레버: 각 **20×76**, 투명 배경 (**적용됨**)
-- **T자 레버** `abandon_t_lever.png`: **34×20**, 투명 배경. 좌우 레버를 모두 내리면 SCRAM 아래 상자에서 솟아오르고, 끌어내리면 포기가 실행된다. 게임에서 위아래로 움직이므로 **손잡이(가로 막대)와 짧은 축만** 그린다. 축 아래쪽 끝은 상자 속으로 들어가는 부분이라 잘려 있어도 된다.
-- 지금은 T자 레버가 임시 그래픽(빨간 막대)으로 나온다.
+- **Π자 손잡이** `abandon_pull_handle.png`: **40×20**, 투명 배경. 거꾸로 뒤집은 U자 모양. 좌우 레버를 모두 내리면 SCRAM 아래 상자에서 솟아오르고, 끌어내리면 포기가 실행된다. 게임에서 위아래로 움직이므로 **가로 손잡이와 짧은 기둥 두 개만** 그린다. 기둥 아래쪽 끝은 상자 속으로 들어가는 부분이라 잘려 있어도 된다.
+- 지금은 임시 그래픽(빨간 가로 막대 + 기둥 두 개)으로 나온다.
+- **잘림 방지**: 물체 둘레에 빈 여백을 충분히 두고 생성해 달라고 요청한다. 잘라내는 것은 이쪽에서 한다.
 
 ```
 [공통 스타일 블록]
-A T-shaped emergency pull handle seen straight from the front: a thick horizontal grip bar painted alarm red with worn black rubber ends,
-mounted on top of a short vertical steel shaft that goes straight down. Isolated object, transparent background, nothing else.
+A Π-shaped (upside-down U) emergency pull handle seen straight from the front: a thick horizontal grip bar painted alarm red with worn black rubber ends,
+held up by two short parallel vertical steel posts that go straight down from both ends of the bar.
+Isolated object, centered, with generous empty transparent margin around it, nothing else.
 ```
 
 ### 2-7. 모듈 슬롯 — `slot_empty.png`, `slot_blocked.png`
@@ -344,7 +346,7 @@ A wide cinematic pixel art scene, aspect ratio 16:9: <그림 설명>.
 - [x] 책상 상판 2차: 조작 장치 받침까지 그려 넣은 버전 (게임에 적용됨. 세밀한 그림이라 640×190 대신 1280×380으로 줄여 쓰고, 레버·버튼·다이얼·휠·슬롯 위치를 그림에 맞춤)
 - [x] 제어봉 손잡이, 터빈 휠, 포기 좌우 레버 (게임에 적용됨)
 - [ ] SCRAM 버튼·눌린 버튼, 펌프 손잡이: **잘림 문제로 다시 잘라야 함** (SCRAM 버튼은 오른쪽이 잘리고 하우징 조각이 붙음, 펌프 손잡이는 양옆이 잘림). 원본 큰 이미지를 올리면 다시 자른다
-- [ ] SCRAM 덮개, 포기 T자 레버 (2-3, 2-6)
+- [ ] SCRAM 덮개, 포기 Π자 손잡이 (2-3, 2-6)
 - [ ] 슬롯 2종, 모듈 카트리지 6종, 아이콘 13종
 - [ ] 대피 상반신 그림자 (지금은 임시 그래픽)
 - [ ] (선택) 결말 일러스트 4종

@@ -20,14 +20,14 @@ const SLOT = { xs: [450, 575, 700, 822], ys: [452, 562], w: 96, h: 86 };
 /** 포기 레버 홈 (책상 x 18~43 / 1232~1255, y 68~270) */
 const ABANDON_LEVERS = [{ x: 30, side: 'L' }, { x: 1244, side: 'R' }] as const;
 const ABANDON_TRACK = { top: 408, bottom: 610 };
-/** 포기 상자 안쪽: SCRAM 바로 아래 (책상 212~324 × 237~267). 좌우 레버를 내리면 여기서 T자 레버가 솟아오른다 */
+/** 포기 상자 안쪽: SCRAM 바로 아래 (책상 212~324 × 237~267). 좌우 레버를 내리면 여기서 Π자 손잡이가 솟아오른다 */
 const ABANDON_BOX = { x: 212, y: 577, w: 112, h: 31 };
-/** T자 레버: 상자 위로 rise만큼 솟고, pull의 85% 이상 끌어내리면 포기 */
-const T_LEVER = { x: ABANDON_BOX.x + ABANDON_BOX.w / 2, base: ABANDON_BOX.y + 4, rise: 28 };
+/** Π자(거꾸로 뒤집은 U자) 손잡이: 상자 위로 rise만큼 솟고, 85% 이상 끌어내리면 포기. legs = 기둥 간격의 절반 */
+const PULL_HANDLE = { x: ABANDON_BOX.x + ABANDON_BOX.w / 2, base: ABANDON_BOX.y + 4, rise: 28, legs: 30 };
 
 const DIAL_MIN = -225 * Math.PI / 180, DIAL_MAX = 45 * Math.PI / 180;
 
-type Drag = { kind: 'lever' } | { kind: 'dial' } | { kind: 'wheel'; last: number } | { kind: 'slot'; from: number } | { kind: 'tlever'; startY: number };
+type Drag = { kind: 'lever' } | { kind: 'dial' } | { kind: 'wheel'; last: number } | { kind: 'slot'; from: number } | { kind: 'handle'; startY: number };
 
 /** 책상 부품 아트 (docs/art-prompts.md 2-2 ~ 2-6). 없는 것은 임시 그래픽 */
 export interface DeskParts { rodHandle?: Texture; wheel?: Texture; leverUp?: Texture; leverDown?: Texture }
@@ -48,9 +48,9 @@ export function slotRect(i: number) {
 export class Desk extends Container {
   scramCoverOpen = false;
   abandonPulled = { L: false, R: false };
-  /** T자 레버가 솟아오른 정도 0..1, 끌어내린 거리 */
-  tRise = 0;
-  tPull = 0;
+  /** Π자 손잡이가 솟아오른 정도 0..1, 끌어내린 거리 */
+  handleRise = 0;
+  handlePull = 0;
   private lastNow = 0;
   private parts: DeskParts = {};
   private sprites: { rod?: Sprite; wheel?: Sprite; levers?: Sprite[] } = {};
@@ -115,12 +115,12 @@ export class Desk extends Container {
     this.hit(DIAL.x - DIAL.r, DIAL.y - DIAL.r, DIAL.r * 2, DIAL.r * 2, (e) => { this.drag = { kind: 'dial' }; this.dragMove(e); }, '냉각 펌프 다이얼: 드래그 또는 휠. 85% 이상은 펌프가 닳는다.', (e) => setPump(this.g(), this.g().pumpCmd - Math.sign(e.deltaY) * 0.03));
     this.hit(WHEEL.x - WHEEL.r, WHEEL.y - WHEEL.r, WHEEL.r * 2, WHEEL.r * 2, (e) => { this.drag = { kind: 'wheel', last: this.angleTo(WHEEL, e) }; }, '터빈 밸브 휠: 돌려서 연다/닫는다. 실제 밸브는 천천히 따라온다.', (e) => setValve(this.g(), this.g().valveTarget - Math.sign(e.deltaY) * 0.03));
     for (const lv of ABANDON_LEVERS) {
-      this.hit(lv.x - 18, ABANDON_TRACK.top, 36, ABANDON_TRACK.bottom - ABANDON_TRACK.top, () => { this.abandonPulled[lv.side] = !this.abandonPulled[lv.side]; }, '포기 레버: 좌우 레버를 모두 내리면 SCRAM 아래에서 T자 레버가 솟아오른다.');
+      this.hit(lv.x - 18, ABANDON_TRACK.top, 36, ABANDON_TRACK.bottom - ABANDON_TRACK.top, () => { this.abandonPulled[lv.side] = !this.abandonPulled[lv.side]; }, '포기 레버: 좌우 레버를 모두 내리면 SCRAM 아래에서 Π자 손잡이가 솟아오른다.');
     }
-    this.hit(ABANDON_BOX.x, T_LEVER.base - T_LEVER.rise - 12, ABANDON_BOX.w, ABANDON_BOX.h + T_LEVER.rise + 12, (e) => {
-      if (this.tRise < 0.95) return;
-      this.drag = { kind: 'tlever', startY: this.toLocal(e.global).y - this.tPull };
-    }, 'T자 레버: 끝까지 끌어내리면 운전원은 대피하고 원자로는 폭발한다. 발전량 몰수, 이후 체포.');
+    this.hit(ABANDON_BOX.x, PULL_HANDLE.base - PULL_HANDLE.rise - 12, ABANDON_BOX.w, ABANDON_BOX.h + PULL_HANDLE.rise + 12, (e) => {
+      if (this.handleRise < 0.95) return;
+      this.drag = { kind: 'handle', startY: this.toLocal(e.global).y - this.handlePull };
+    }, 'Π자 손잡이: 끝까지 끌어내리면 운전원은 대피하고 원자로는 폭발한다. 발전량 몰수, 이후 체포.');
 
     this.eventMode = 'static';
     this.on('globalpointermove', (e) => { this.lastPos = this.toLocal(e.global); this.dragMove(e); });
@@ -169,9 +169,9 @@ export class Desk extends Container {
       if (d < -Math.PI) d += Math.PI * 2;
       this.drag.last = a;
       setValve(g, g.valveTarget + d / (Math.PI * 4)); // 두 바퀴 = 완전 개방
-    } else if (this.drag.kind === 'tlever') {
-      this.tPull = Math.max(0, Math.min(T_LEVER.rise, p.y - this.drag.startY));
-      if (this.tPull >= T_LEVER.rise * 0.85) {
+    } else if (this.drag.kind === 'handle') {
+      this.handlePull = Math.max(0, Math.min(PULL_HANDLE.rise, p.y - this.drag.startY));
+      if (this.handlePull >= PULL_HANDLE.rise * 0.85) {
         this.drag = null;
         abandon(g);
       }
@@ -309,7 +309,7 @@ export class Desk extends Container {
     }
     this.texts.wheel.text = `목표 ${(g.valveTarget * 100).toFixed(0)}%  실제 ${(g.valve * 100).toFixed(0)}%${g.t < g.tripUntil ? '\n터빈 트립!' : ''}`;
 
-    // 포기 레버 2개: 둘 다 내리면 SCRAM 아래 상자에서 T자 레버가 솟아오른다
+    // 포기 레버 2개: 둘 다 내리면 SCRAM 아래 상자에서 Π자 손잡이가 솟아오른다
     ABANDON_LEVERS.forEach((lv, i) => {
       const pulled = this.abandonPulled[lv.side];
       const sp = this.sprites.levers?.[i];
@@ -323,16 +323,19 @@ export class Desk extends Container {
     });
     const dt = this.lastNow ? Math.min(0.1, (now - this.lastNow) / 1000) : 0;
     this.lastNow = now;
-    this.tRise = Math.max(0, Math.min(1, this.tRise + (this.bothPulled() ? dt : -dt) * 2));
-    if (this.drag?.kind !== 'tlever') this.tPull = Math.max(0, this.tPull - 160 * dt); // 놓으면 다시 올라온다
-    if (!this.bothPulled()) this.tPull = 0;
+    this.handleRise = Math.max(0, Math.min(1, this.handleRise + (this.bothPulled() ? dt : -dt) * 2));
+    if (this.drag?.kind !== 'handle') this.handlePull = Math.max(0, this.handlePull - 160 * dt); // 놓으면 다시 올라온다
+    if (!this.bothPulled()) this.handlePull = 0;
     const b = ABANDON_BOX;
     if (!this.hasArt) d.rect(b.x, b.y, b.w, b.h).fill(C.black).stroke({ width: 2, color: C.hazard });
-    if (this.tRise > 0) {
-      const top = T_LEVER.base - T_LEVER.rise * this.tRise + this.tPull;
+    if (this.handleRise > 0) {
+      const top = PULL_HANDLE.base - PULL_HANDLE.rise * this.handleRise + this.handlePull;
       const glow = Math.floor(now / 250) % 2 ? C.red : C.redDark;
-      d.rect(T_LEVER.x - 5, top, 10, T_LEVER.base - top).fill(C.metalDark).stroke({ width: 2, color: C.black });
-      d.roundRect(T_LEVER.x - 34, top - 8, 68, 14, 5).fill(glow).stroke({ width: 2, color: C.black });
+      // 기둥 두 개 + 위쪽 가로 손잡이 = Π
+      for (const side of [-1, 1]) {
+        d.rect(PULL_HANDLE.x + side * PULL_HANDLE.legs - 4, top, 8, PULL_HANDLE.base - top).fill(C.metalDark).stroke({ width: 2, color: C.black });
+      }
+      d.roundRect(PULL_HANDLE.x - PULL_HANDLE.legs - 8, top - 8, (PULL_HANDLE.legs + 8) * 2, 14, 5).fill(glow).stroke({ width: 2, color: C.black });
     }
 
     // 모듈 슬롯

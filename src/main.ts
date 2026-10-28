@@ -79,8 +79,8 @@ function restart() {
   supply.pendingReplace = null;
   desk.scramCoverOpen = false;
   desk.abandonPulled = { L: false, R: false };
-  desk.tRise = 0;
-  desk.tPull = 0;
+  desk.handleRise = 0;
+  desk.handlePull = 0;
   ending.hide();
   evacuation.stop();
   app.stage.position.set(0, 0);
