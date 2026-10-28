@@ -1,14 +1,16 @@
 # v로 시작하는 태그(예: v0.2.0)를 푸시하면 Windows용 설치 파일을 만들어 GitHub Release에 올린다.
 # 설치된 게임은 실행할 때 이 Release를 확인해서 자동으로 업데이트한다 (electron/main.cjs).
 #
-# 새 버전 내기:
-#   npm version patch      # package.json 버전을 올리고 커밋 + 태그 생성 (minor/major도 가능)
-#   git push --follow-tags
+# 새 버전 내기 (둘 중 하나):
+#   1) npm version patch && git push --follow-tags   (package.json 버전 + 태그를 함께 올림)
+#   2) package.json 버전을 올려 main에 머지한 뒤, Actions → "Release (Windows)" → Run workflow
+#      (Release를 만들면서 v<버전> 태그가 자동으로 생긴다)
 name: Release (Windows)
 
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -23,6 +25,7 @@ jobs:
           node-version: 22
           cache: npm
       - name: 태그와 package.json 버전 일치 확인
+        if: github.event_name == 'push'
         shell: bash
         run: |
           version="v$(node -p "require('./package.json').version")"
