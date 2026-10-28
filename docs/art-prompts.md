@@ -153,7 +153,7 @@ No numbers, no text.
 | 주황 테두리 8칸 | 모듈 슬롯 소켓 (지금 그림 그대로) | 202+60c, 40 / 101, 55×54 | 31.6% ~ 76.1% | 21.1% ~ 81.6% |
 | 하늘색 원 (왼쪽) + 눈금 | 냉각 펌프 **다이얼 판**: 7시 반 → 4시 반 방향 270° 눈금 11개, 마지막 2개 빨강 (손잡이 없음) | 중심 492, 70, 반지름 35 | 71.4% ~ 82.3% | 18.4% ~ 55.3% |
 | 하늘색 원 (오른쪽) + 가운데 점 | 터빈 밸브 **휠 받침**: 둥근 받침판과 가운데 축 (휠 없음) | 중심 567, 70, 반지름 34 | 83.3% ~ 93.9% | 18.9% ~ 54.7% |
-| 빨간 테두리 사각형 (가운데 아래) | 포기 버튼 **상자**: 경고 줄무늬 테두리의 작은 검은 상자 (버튼·덮개 없음) | 285, 167, 70×20 | 44.5% ~ 55.5% | 87.9% ~ 98.4% |
+| 빨간 테두리 사각형 (SCRAM 바로 아래) | 포기 버튼 **상자**: 경고 줄무늬 테두리의 작은 검은 상자 (버튼·덮개 없음) | 107, 122, 61×22 | 16.7% ~ 26.3% | 64.2% ~ 75.8% |
 | 양 끝 흰 테두리 막대 | 포기 레버 홈 (지금 그림 그대로) | 6 / 620, 38, 14×110 | 0.9% ~ 3.1% / 96.9% ~ 99.1% | 20% ~ 77.9% |
 
 - 가이드의 색깔 선(흰색·노랑·주황·하늘색·빨강)은 위치 표시일 뿐이니 **그대로 그리지 않는다.**
@@ -167,7 +167,7 @@ and add the FIXED bases of the controls, placed exactly where the attached layou
 - Left plate, right of the rail: a square emergency button housing with a yellow-and-black diagonal hazard stripe border and a dark empty recess inside. No button, no cover.
 - Right plate, left: a round dark dial plate with 11 tick marks on a 270-degree arc from the 7:30 position clockwise to the 4:30 position; the last two ticks red. No knob.
 - Right plate, right: a round bolted mounting plate with a short central axle hub for a valve handwheel. No wheel.
-- Bottom center, below the sockets: a small wide black box with a yellow-and-black hazard border. No button, no cover.
+- Left plate, directly below the emergency button housing and the same width: a small wide black box with a yellow-and-black hazard border. No button, no cover.
 Do not draw any moving parts (handles, knobs, wheels, buttons, covers). Do not draw the colored guide lines. No text.
 ```
 

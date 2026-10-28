@@ -15,7 +15,8 @@ const SLOT = { x: 404, y: 420, w: 110, h: 108, gapX: 10, gapY: 14 };
 /** 포기 레버는 책상 양 끝의 홈(원본 x 6~20, y 38~148)에 들어간다 */
 const ABANDON_LEVERS = [{ x: 26, side: 'L' }, { x: W - 26, side: 'R' }] as const;
 const ABANDON_TRACK = { top: 416, bottom: 636 };
-const ABANDON_BOX = { x: 570, y: 674, w: 140, h: 40 };
+/** 포기 버튼은 SCRAM 바로 아래 빈 공간 (SCRAM과 같은 폭) */
+const ABANDON_BOX = { x: 215, y: 584, w: 120, h: 44 };
 
 const DIAL_MIN = -225 * Math.PI / 180, DIAL_MAX = 45 * Math.PI / 180;
 
