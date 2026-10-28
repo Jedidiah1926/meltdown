@@ -82,6 +82,7 @@ function restart() {
   desk.abandonPos = { L: 0, R: 0 };
   desk.handleRise = 0;
   desk.handlePull = 0;
+  desk.handleLocked = false;
   ending.hide();
   evacuation.stop();
   app.stage.position.set(0, 0);

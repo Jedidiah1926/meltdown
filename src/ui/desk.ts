@@ -25,7 +25,7 @@ const ABANDON_SPAN = { top: ABANDON_TRACK.top + 12, bottom: ABANDON_TRACK.bottom
 /** 포기 상자 안쪽: SCRAM 바로 아래 (책상 212~324 × 237~267). 좌우 레버를 내리면 여기서 Π자 손잡이가 솟아오른다 */
 const ABANDON_BOX = { x: 212, y: 577, w: 112, h: 31 };
 /** Π자(거꾸로 뒤집은 U자) 손잡이: 상자 위로 rise만큼 솟고, 85% 이상 끌어내리면 포기. legs = 기둥 간격의 절반 */
-const PULL_HANDLE = { x: ABANDON_BOX.x + ABANDON_BOX.w / 2, base: ABANDON_BOX.y + 4, rise: 28, legs: 30 };
+const PULL_HANDLE = { x: ABANDON_BOX.x + ABANDON_BOX.w / 2, base: ABANDON_BOX.y + 4, rise: 34, legs: 30 };
 
 const DIAL_MIN = -225 * Math.PI / 180, DIAL_MAX = 45 * Math.PI / 180;
 
@@ -57,6 +57,8 @@ export class Desk extends Container {
   /** Π자 손잡이가 솟아오른 정도 0..1, 끌어내린 거리 */
   handleRise = 0;
   handlePull = 0;
+  /** 끝까지 당겨서 걸린 상태 (다시 올라오지 않는다) */
+  handleLocked = false;
   private lastNow = 0;
   private sprites: { rod?: Sprite; wheel?: Sprite; levers?: Sprite[] } = {};
   private drag: Drag | null = null;
@@ -125,7 +127,7 @@ export class Desk extends Container {
       }, '포기 레버: 위·아래 두 곳에만 걸린다. 좌우 레버를 모두 내리면 SCRAM 아래에서 Π자 손잡이가 솟아오른다.');
     }
     this.hit(ABANDON_BOX.x, PULL_HANDLE.base - PULL_HANDLE.rise - 12, ABANDON_BOX.w, ABANDON_BOX.h + PULL_HANDLE.rise + 12, (e) => {
-      if (this.handleRise < 0.95) return;
+      if (this.handleRise < 0.95 || this.handleLocked) return;
       this.drag = { kind: 'handle', startY: this.toLocal(e.global).y - this.handlePull };
     }, 'Π자 손잡이: 끝까지 끌어내리면 운전원은 대피하고 원자로는 폭발한다. 발전량 몰수, 이후 체포.');
 
@@ -181,7 +183,9 @@ export class Desk extends Container {
       if (this.drag.moved) this.abandonPos[this.drag.side] = Math.max(0, Math.min(1, (p.y - ABANDON_SPAN.top) / (ABANDON_SPAN.bottom - ABANDON_SPAN.top)));
     } else if (this.drag.kind === 'handle') {
       this.handlePull = Math.max(0, Math.min(PULL_HANDLE.rise, p.y - this.drag.startY));
-      if (this.handlePull >= PULL_HANDLE.rise * 0.85) {
+      // 끝까지 내려야만 걸리고 포기가 실행된다
+      if (this.handlePull >= PULL_HANDLE.rise) {
+        this.handleLocked = true;
         this.drag = null;
         abandon(g);
       }
@@ -344,9 +348,14 @@ export class Desk extends Container {
       if (!this.hasArt) d.rect(lv.x - 6, ABANDON_TRACK.top, 12, ABANDON_TRACK.bottom - ABANDON_TRACK.top).fill(C.black);
       d.roundRect(lv.x - 20, y - 8, 40, 16, 4).fill(C.metal).stroke({ width: 2, color: C.black });
     });
-    this.handleRise = Math.max(0, Math.min(1, this.handleRise + (this.bothPulled() ? dt : -dt) * 2));
-    if (this.drag?.kind !== 'handle') this.handlePull = Math.max(0, this.handlePull - 160 * dt); // 놓으면 다시 올라온다
-    if (!this.bothPulled()) this.handlePull = 0;
+    if (this.handleLocked) {
+      this.handleRise = 1;
+      this.handlePull = PULL_HANDLE.rise;
+    } else {
+      this.handleRise = Math.max(0, Math.min(1, this.handleRise + (this.bothPulled() ? dt : -dt) * 2));
+      if (this.drag?.kind !== 'handle') this.handlePull = Math.max(0, this.handlePull - 160 * dt); // 끝까지 안 당기고 놓으면 다시 올라온다
+      if (!this.bothPulled()) this.handlePull = 0;
+    }
     const b = ABANDON_BOX;
     if (!this.hasArt) d.rect(b.x, b.y, b.w, b.h).fill(C.black).stroke({ width: 2, color: C.hazard });
     if (this.handleRise > 0) {
