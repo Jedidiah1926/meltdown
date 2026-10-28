@@ -6,17 +6,22 @@ import {
 } from '../sim/game';
 import { C, CATEGORY_COLOR, H, WALL_H, W, label } from './theme';
 
-const LEVER = { x: 130, top: 400, bottom: 660 };
-const SCRAM_BOX = { x: 215, y: 430, w: 120, h: 120 };
-const DIAL = { x: 985, y: 480, r: 52 };
-const WHEEL = { x: 1135, y: 480, r: 62 };
-/** 슬롯 위치는 책상 아트(desk_bg.png)의 소켓에 맞춘다: 원본 (202 + 60c, 40 / 101), 55×54 의 2배 */
-const SLOT = { x: 404, y: 420, w: 110, h: 108, gapX: 10, gapY: 14 };
-/** 포기 레버는 책상 양 끝의 홈(원본 x 6~20, y 38~148)에 들어간다 */
-const ABANDON_LEVERS = [{ x: 26, side: 'L' }, { x: W - 26, side: 'R' }] as const;
-const ABANDON_TRACK = { top: 416, bottom: 636 };
-/** 포기 버튼은 SCRAM 바로 아래 빈 공간 (SCRAM과 같은 폭) */
-const ABANDON_BOX = { x: 215, y: 584, w: 120, h: 44 };
+// 위치는 모두 책상 아트(desk_bg.png, 1280×380)에서 잰 값. 책상 위쪽 끝이 화면 y=340
+/** 제어봉 레버 홈 (책상 x 111~135, y 68~270) */
+const LEVER = { x: 123, top: 410, bottom: 608 };
+/** SCRAM 하우징 안쪽 (책상 212~323 × 92~192) */
+const SCRAM_BOX = { x: 212, y: 432, w: 112, h: 100 };
+/** 펌프 다이얼 판 중심 (책상 968, 160), 눈금 반지름 약 58 → 손잡이는 그 안쪽 */
+const DIAL = { x: 968, y: 500, r: 44 };
+/** 터빈 휠 받침 중심 (책상 1129, 161), 받침 반지름 66 */
+const WHEEL = { x: 1129, y: 501, r: 58 };
+/** 슬롯 소켓 중심 (책상 x 450/575/700/822, y 112/222), 안쪽 크기 약 96×86 */
+const SLOT = { xs: [450, 575, 700, 822], ys: [452, 562], w: 96, h: 86 };
+/** 포기 레버 홈 (책상 x 18~43 / 1232~1255, y 68~270) */
+const ABANDON_LEVERS = [{ x: 30, side: 'L' }, { x: 1244, side: 'R' }] as const;
+const ABANDON_TRACK = { top: 408, bottom: 610 };
+/** 포기 버튼 상자 안쪽: SCRAM 바로 아래 (책상 212~324 × 237~267) */
+const ABANDON_BOX = { x: 212, y: 577, w: 112, h: 31 };
 
 const DIAL_MIN = -225 * Math.PI / 180, DIAL_MAX = 45 * Math.PI / 180;
 
@@ -32,7 +37,7 @@ export interface DeskHooks {
 
 export function slotRect(i: number) {
   const r = Math.floor(i / SLOT_COLS), c = i % SLOT_COLS;
-  return { x: SLOT.x + c * (SLOT.w + SLOT.gapX), y: SLOT.y + r * (SLOT.h + SLOT.gapY), w: SLOT.w, h: SLOT.h };
+  return { x: SLOT.xs[c] - SLOT.w / 2, y: SLOT.ys[r] - SLOT.h / 2, w: SLOT.w, h: SLOT.h };
 }
 
 export class Desk extends Container {
@@ -55,7 +60,8 @@ export class Desk extends Container {
       .rect(0, WALL_H, W, H - WALL_H).fill(C.desk)
       .rect(0, WALL_H, W, 14).fill(C.deskEdge);
     // 슬롯 베이
-    bg.roundRect(SLOT.x - 14, SLOT.y - 14, 4 * SLOT.w + 3 * SLOT.gapX + 28, 2 * SLOT.h + SLOT.gapY + 28, 8).fill(C.wallDark);
+    const first = slotRect(0), last = slotRect(7);
+    bg.roundRect(first.x - 14, first.y - 14, last.x + last.w - first.x + 28, last.y + last.h - first.y + 28, 8).fill(C.wallDark);
     this.addChild(bg, this.dyn, this.slotLayer);
 
     const t = (key: string, s: string, x: number, y: number, size = 13, fill: number = C.textDim) => {
@@ -66,15 +72,15 @@ export class Desk extends Container {
       return tx;
     };
     t('leverTitle', '제어봉 [Q 빼기 / A 넣기]', 60, 366);
-    t('lever', '', 82, 670, 13, C.amber);
-    t('scramTitle', 'SCRAM [X]', 236, 404);
-    t('dialTitle', '냉각 펌프 [W/S]', 930, 400);
-    t('dial', '', 955, 545, 14, C.amber);
-    t('wheelTitle', '터빈 밸브 [E/D]', 1080, 400);
-    t('wheel', '', 1080, 555, 13, C.amber);
-    t('abandonL', '포기', 14, 656, 12);
-    t('abandonR', '포기', W - 38, 656, 12);
-    t('info', '', SLOT.x, 654, 13, C.text);
+    t('lever', '', 60, 638, 13, C.amber);
+    t('scramTitle', 'SCRAM [X]', 238, 404);
+    t('dialTitle', '냉각 펌프 [W/S]', 922, 404);
+    t('dial', '', 922, 580, 14, C.amber);
+    t('wheelTitle', '터빈 밸브 [E/D]', 1082, 404);
+    t('wheel', '', 1066, 580, 13, C.amber);
+    t('abandonL', '포기', 18, 616, 12);
+    t('abandonR', '포기', 1232, 616, 12);
+    t('info', '', 404, 622, 13, C.text);
     this.texts.info.style.wordWrap = true;
     this.texts.info.style.wordWrapWidth = 480;
 
@@ -205,41 +211,47 @@ export class Desk extends Container {
     const d = this.dyn.clear();
 
     // 제어봉 레버: 홈과 눈금, 손잡이(목표), 실제 위치 표시
-    d.roundRect(LEVER.x - 10, LEVER.top - 6, 20, LEVER.bottom - LEVER.top + 12, 6).fill(C.black);
-    for (let n = 0; n <= LEVER_NOTCHES; n++) {
-      const y = LEVER.top + n / LEVER_NOTCHES * (LEVER.bottom - LEVER.top);
-      d.rect(LEVER.x - 24, y, n % 5 === 0 ? 12 : 7, 2).fill(C.textDim);
+    if (!this.hasArt) {
+      d.roundRect(LEVER.x - 10, LEVER.top - 6, 20, LEVER.bottom - LEVER.top + 12, 6).fill(C.black);
+      for (let n = 0; n <= LEVER_NOTCHES; n++) {
+        const y = LEVER.top + n / LEVER_NOTCHES * (LEVER.bottom - LEVER.top);
+        d.rect(LEVER.x - 24, y, n % 5 === 0 ? 12 : 7, 2).fill(C.textDim);
+      }
     }
     const ly = LEVER.top + g.lever / LEVER_NOTCHES * (LEVER.bottom - LEVER.top);
-    d.roundRect(LEVER.x - 26, ly - 9, 52, 18, 4).fill(g.scrammed ? C.redDark : C.metal).stroke({ width: 2, color: C.black });
+    d.roundRect(LEVER.x - 20, ly - 8, 40, 16, 4).fill(g.scrammed ? C.redDark : C.metal).stroke({ width: 2, color: C.black });
     const ry = LEVER.top + g.rods * (LEVER.bottom - LEVER.top);
-    d.poly([LEVER.x + 30, ry, LEVER.x + 40, ry - 6, LEVER.x + 40, ry + 6]).fill(C.amber);
+    d.poly([LEVER.x + 24, ry, LEVER.x + 34, ry - 6, LEVER.x + 34, ry + 6]).fill(C.amber);
     this.texts.lever.text = `삽입 ${g.lever}/${LEVER_NOTCHES}  실제 ${(g.rods * 100).toFixed(0)}%`;
 
     // SCRAM: 경고 줄무늬 + 덮개
     const s = SCRAM_BOX;
-    d.rect(s.x, s.y, s.w, s.h).fill(C.hazard);
-    // 테두리를 따라 노랑·검정 경고 블록
-    for (let k = 0; k < s.w; k += 20) {
-      d.rect(s.x + k, s.y, 10, 12).fill(C.black);
-      d.rect(s.x + k + 10, s.y + s.h - 12, 10, 12).fill(C.black);
+    if (!this.hasArt) {
+      d.rect(s.x, s.y, s.w, s.h).fill(C.hazard);
+      // 테두리를 따라 노랑·검정 경고 블록
+      for (let k = 0; k < s.w; k += 20) {
+        d.rect(s.x + k, s.y, 10, 12).fill(C.black);
+        d.rect(s.x + k + 10, s.y + s.h - 12, 10, 12).fill(C.black);
+      }
+      for (let k = 0; k < s.h; k += 20) {
+        d.rect(s.x, s.y + k + 10, 12, 10).fill(C.black);
+        d.rect(s.x + s.w - 12, s.y + k, 12, 10).fill(C.black);
+      }
+      d.rect(s.x + 12, s.y + 12, s.w - 24, s.h - 24).fill(C.wallDark);
     }
-    for (let k = 0; k < s.h; k += 20) {
-      d.rect(s.x, s.y + k + 10, 12, 10).fill(C.black);
-      d.rect(s.x + s.w - 12, s.y + k, 12, 10).fill(C.black);
-    }
-    d.rect(s.x + 12, s.y + 12, s.w - 24, s.h - 24).fill(C.wallDark);
     d.circle(s.x + s.w / 2, s.y + s.h / 2, 32).fill(g.scrammed ? C.redDark : C.red);
     if (!this.scramCoverOpen) d.rect(s.x + 6, s.y + 6, s.w - 12, s.h - 12).fill({ color: 0xb8d4e0, alpha: 0.55 }).stroke({ width: 2, color: 0xe0f0f8 });
     else d.rect(s.x + 6, s.y - 30, s.w - 12, 26).fill({ color: 0xb8d4e0, alpha: 0.55 });
 
     // 펌프 다이얼
-    d.circle(DIAL.x, DIAL.y, DIAL.r + 10).fill(C.wallDark);
-    for (let k = 0; k <= 10; k++) {
-      const a = DIAL_MIN + k / 10 * (DIAL_MAX - DIAL_MIN);
-      d.moveTo(DIAL.x + Math.cos(a) * (DIAL.r + 2), DIAL.y + Math.sin(a) * (DIAL.r + 2))
-        .lineTo(DIAL.x + Math.cos(a) * (DIAL.r + 9), DIAL.y + Math.sin(a) * (DIAL.r + 9))
-        .stroke({ width: 2, color: k >= 9 ? C.red : C.textDim });
+    if (!this.hasArt) {
+      d.circle(DIAL.x, DIAL.y, DIAL.r + 10).fill(C.wallDark);
+      for (let k = 0; k <= 10; k++) {
+        const a = DIAL_MIN + k / 10 * (DIAL_MAX - DIAL_MIN);
+        d.moveTo(DIAL.x + Math.cos(a) * (DIAL.r + 2), DIAL.y + Math.sin(a) * (DIAL.r + 2))
+          .lineTo(DIAL.x + Math.cos(a) * (DIAL.r + 9), DIAL.y + Math.sin(a) * (DIAL.r + 9))
+          .stroke({ width: 2, color: k >= 9 ? C.red : C.textDim });
+      }
     }
     d.circle(DIAL.x, DIAL.y, DIAL.r - 6).fill(C.metal).stroke({ width: 3, color: C.black });
     const pa = DIAL_MIN + g.pumpCmd * (DIAL_MAX - DIAL_MIN);
@@ -260,12 +272,12 @@ export class Desk extends Container {
     for (const lv of ABANDON_LEVERS) {
       const pulled = this.abandonPulled[lv.side];
       if (!this.hasArt) d.rect(lv.x - 6, ABANDON_TRACK.top, 12, ABANDON_TRACK.bottom - ABANDON_TRACK.top).fill(C.black);
-      d.roundRect(lv.x - 14, pulled ? ABANDON_TRACK.bottom - 30 : ABANDON_TRACK.top + 4, 28, 26, 4).fill(pulled ? C.red : C.metal);
+      d.roundRect(lv.x - 11, pulled ? ABANDON_TRACK.bottom - 30 : ABANDON_TRACK.top + 4, 22, 26, 4).fill(pulled ? C.red : C.metal);
     }
     if (this.bothPulled()) {
       const b = ABANDON_BOX;
-      d.rect(b.x, b.y, b.w, b.h).fill(C.black).stroke({ width: 2, color: C.hazard });
-      d.circle(b.x + b.w / 2, b.y + b.h / 2, 14).fill(Math.floor(now / 250) % 2 ? C.red : C.redDark);
+      if (!this.hasArt) d.rect(b.x, b.y, b.w, b.h).fill(C.black).stroke({ width: 2, color: C.hazard });
+      d.circle(b.x + b.w / 2, b.y + b.h / 2, 12).fill(Math.floor(now / 250) % 2 ? C.red : C.redDark);
       if (!this.abandonCoverOpen) d.rect(b.x + 3, b.y + 3, b.w - 6, b.h - 6).fill({ color: 0xb8d4e0, alpha: 0.6 });
     }
 
