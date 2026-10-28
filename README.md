@@ -29,12 +29,14 @@ npm run build    # 타입 검사 + 배포용 빌드 (dist/)
 - 설치된 게임은 실행할 때마다 Release에서 새 버전을 확인한다. 새 버전이 있으면 백그라운드로 받은 뒤 "지금 재시작 / 나중에"를 묻는다. "나중에"를 고르면 게임을 끌 때 설치된다.
 - 서명하지 않은 설치 파일이라 처음 실행할 때 Windows 보안 경고가 뜬다 ("추가 정보 → 실행").
 
-새 버전 내기:
+새 버전 내기 (둘 중 하나):
 
 ```sh
 npm version patch        # 0.1.0 → 0.1.1, 커밋과 태그를 함께 만든다 (minor / major 도 가능)
 git push --follow-tags   # 태그가 올라가면 Release가 자동으로 만들어진다
 ```
+
+또는 `package.json`의 버전을 올려 `main`에 머지한 뒤, GitHub의 **Actions → Release (Windows) → Run workflow**를 누른다. Release를 만들면서 `v<버전>` 태그가 자동으로 생긴다.
 
 로컬에서 데스크톱 앱으로 실행: `npm run app`
 
