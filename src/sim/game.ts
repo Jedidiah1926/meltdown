@@ -161,7 +161,7 @@ function addCause(g: Game, id: CauseId) {
   if (id === 'rodStuck') c.stuckAt = g.rods;
   if (id === 'turbineTrip') { c.nextTripAt = g.t + 4; c.seqPhase = 'low'; c.seqTimer = 0; }
   g.causes.push(c);
-  log(g, `⚠ 사고 원인 발생: ${CAUSES[id].name}`, 'bad');
+  log(g, `▲ 사고 원인 발생: ${CAUSES[id].name}`, 'bad');
   log(g, `  단서: ${CAUSES[id].clue}`, 'warn');
 }
 
@@ -170,7 +170,7 @@ function resolveCause(g: Game, id: CauseId, how: string) {
   g.causes = g.causes.filter((c) => c.id !== id);
   const rep = CAUSES[id].repairs;
   if (rep) g.dura[rep] = 100;
-  log(g, `✔ 원인 해결: ${CAUSES[id].name} (${how})`, 'good');
+  log(g, `○ 원인 해결: ${CAUSES[id].name} (${how})`, 'good');
   queueSupply(g, '원인 해결');
 }
 
@@ -185,7 +185,7 @@ function queueSupply(g: Game, reason: string) {
     options.push(weightedPick(g.rng, left, (m) => SUPPLY_WEIGHT[m.category]));
   }
   g.supplyQueue.push({ options, reason });
-  log(g, `📦 보급 도착 (${reason})`, 'good');
+  log(g, `▣ 보급 도착 (${reason})`, 'good');
 }
 
 /** 보급 선택. slot이 차 있으면 기존 모듈을 버리고 교체한다. moduleId가 null이면 건너뛴다. */

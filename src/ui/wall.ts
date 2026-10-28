@@ -1,5 +1,5 @@
 // 벽면 콘솔 = 보는 것: 위험도 게이지, CRT, 경고등, 계기 (GDD 12장 화면 구도)
-import { Container, Graphics, Sprite, type Text, type Texture } from 'pixi.js';
+import { Container, Graphics, Rectangle, Sprite, Texture, type Text } from 'pixi.js';
 import { CRTFilter, GlowFilter } from 'pixi-filters';
 import { CAUSES, EQUIPMENT_NAME, FAILURE_CAUSE, type Equipment } from '../sim/data';
 import { STAGE_NAME, STAGE_NAME_KO, has, hasCause, type Game } from '../sim/game';
@@ -11,7 +11,9 @@ const GAUGE_MAX = 150;
 export interface LampTextures { off: Texture; amber: Texture; red: Texture; green: Texture }
 
 /** 게이지 판 아트(gauge_face.png)에서 측정한 값. 원본 픽셀 좌표, 각도는 화면 기준(y 아래) 도 단위 */
-const ART_FACE = { x: 20, y: 40, scale: 2, pivotX: 74.5, pivotY: 92 };
+/** 판 그림에서 바깥 녹슨 배경을 뺀 테두리 부분 (원본 픽셀). 벽면 게이지 자리(테두리 안쪽 14~157, 24~147) 가운데에 놓는다 */
+const ART_FACE_CROP = { x: 1, y: 9, w: 148, h: 110 };
+const ART_FACE = { x: 24, y: 62, scale: 2, pivotX: 74.5 - ART_FACE_CROP.x, pivotY: 92 - ART_FACE_CROP.y };
 const ART_NEEDLE_PIVOT = { x: 3, y: 59 };
 /** 위험도 → 아트 눈금 각도. 그림의 색 경계(초록/노랑, 노랑/빨강)가 규칙의 40%·75%에 오도록 구간별로 맞춘다 */
 const ART_STOPS: [number, number][] = [[0, -158], [40, -89], [75, -45.7], [100, -21], [GAUGE_MAX, 20]];
@@ -38,7 +40,6 @@ export class Wall extends Container {
   /** 게이지 아트가 들어오면 숨기는 임시 게이지 판 */
   private facePlaceholder = new Container();
   private needleValue = 0;
-  private gaugeText: Text;
   private crt = new Container();
   private crtGfx = new Graphics();
   private crtStage: Text;
@@ -81,13 +82,11 @@ export class Wall extends Container {
         .stroke({ width: v % 50 === 0 ? 3 : 1, color: 0x2a120d });
     }
     face.circle(GAUGE.x, GAUGE.y, 10).fill(0x2a120d);
-    const ttl = label('☢ 위험도', 16, 0x2a120d);
+    const ttl = label('※ 위험도', 16, 0x2a120d);
     ttl.position.set(GAUGE.x - ttl.width / 2, GAUGE.y + 22);
     this.facePlaceholder.addChild(face, ttl);
     this.addChild(this.facePlaceholder);
-    this.gaugeText = label('', 12, 0x5a2a1a);
-    this.gaugeText.position.set(40, 268);
-    this.addChild(this.needle, this.gaugeText);
+    this.addChild(this.needle);
 
     // CRT
     const bezel = new Graphics()
@@ -106,9 +105,10 @@ export class Wall extends Container {
     // 오른쪽: 경고등 + 디지털 계기 (2000 단계 = 디지털 표시)
     (['pump', 'turbine', 'sg', 'rodDrive'] as Equipment[]).forEach((e, i) => {
       const g = new Graphics();
-      g.position.set(990 + i * 70, 50);
+      g.position.set(1000 + i * 68, 52);
       const t = label(EQUIPMENT_NAME[e].replace(' ', '\n'), 11, C.textDim, { align: 'center' });
-      t.position.set(990 + i * 70 - 24, 70);
+      t.anchor.set(0.5, 0);
+      t.position.set(1000 + i * 68, 72);
       this.lamps.push({ e, g, t });
       this.addChild(g, t);
     });
@@ -124,7 +124,7 @@ export class Wall extends Container {
       this.addChild(n, v);
     });
     this.stableText = label('', 12, C.green);
-    this.stableText.position.set(980, 300);
+    this.stableText.position.set(980, 286);
     this.addChild(this.stableText);
   }
 
@@ -138,7 +138,8 @@ export class Wall extends Container {
 
   /** 위험도 게이지 아트 적용 (docs/art-prompts.md 1-2, 1-3) */
   useGauge(face: Texture, needle: Texture) {
-    const f = new Sprite(face);
+    const crop = new Texture({ source: face.source, frame: new Rectangle(ART_FACE_CROP.x, ART_FACE_CROP.y, ART_FACE_CROP.w, ART_FACE_CROP.h) });
+    const f = new Sprite(crop);
     f.position.set(ART_FACE.x, ART_FACE.y);
     f.scale.set(ART_FACE.scale);
     const n = new Sprite(needle);
@@ -150,17 +151,6 @@ export class Wall extends Container {
     this.facePlaceholder.visible = false;
     this.needle.visible = false;
     this.needleSprite = n;
-    // 노심 한계 글자는 게이지 아래 벽으로 옮긴다 (판 테두리가 어두워서)
-    this.gaugeText.style.fill = C.amber;
-    this.gaugeText.position.set(30, 304);
-  }
-
-  /** CRT 테두리 아트 (docs/art-prompts.md 1-4). 화면 구멍(8,7, 284×136)이 CRT 내용 영역과 맞는다 */
-  useCrtBezel(texture: Texture) {
-    const b = new Sprite(texture);
-    b.position.set(340, 20);
-    b.scale.set(2);
-    this.addChildAt(b, this.getChildIndex(this.crt) + 1);
   }
 
   /** 경고등 아트 (docs/art-prompts.md 1-5). 정상 초록, 고장 징후 주황 깜빡임, 고장 빨강 */
@@ -187,7 +177,6 @@ export class Wall extends Container {
       .moveTo(GAUGE.x, GAUGE.y)
       .lineTo(GAUGE.x + Math.cos(a) * (GAUGE.r - 6), GAUGE.y + Math.sin(a) * (GAUGE.r - 6))
       .stroke({ width: 3, color: 0x1a0808 });
-    this.gaugeText.text = has(g, 'coreLimit') ? `노심 한계 ${g.meltPoint.toFixed(0)}%` : '';
 
     // CRT: 출력 파형 + 단계 선포 + 운전 일지
     this.crtFilter.time += dt * 4;

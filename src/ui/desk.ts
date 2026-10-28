@@ -280,7 +280,9 @@ export class Desk extends Container {
         d.roundRect(r.x + 5, r.y + 5, r.w - 10, r.h - 10, 5).fill(0x2a1a14).stroke({ width: 3, color: col });
         d.rect(r.x + 5, r.y + 5, r.w - 10, 16).fill(col);
         if (def.category === 'risky') for (let k = 0; k < r.w - 10; k += 12) d.rect(r.x + 5 + k, r.y + 5, 6, 16).fill(C.black);
-        this.slotTexts[i].text = `${CATEGORY_NAME[def.category]}\n${def.short}${def.fixes ? '\n[클릭: 사용]' : ''}`;
+        // 노심 한계 측정기는 이번 판의 멜트다운 지점을 카드 위에 보여 준다
+        const extra = def.fixes ? '\n[클릭: 사용]' : id === 'coreLimit' ? `\n한계 ${g.meltPoint.toFixed(0)}%` : '';
+        this.slotTexts[i].text = `${CATEGORY_NAME[def.category]}\n${def.short}${extra}`;
       } else {
         this.slotTexts[i].text = '';
       }
@@ -291,5 +293,5 @@ export class Desk extends Container {
 
 export function moduleTip(id: ModuleId): string {
   const def = MODULES[id];
-  return `[${CATEGORY_NAME[def.category]}] ${def.name} — ${def.desc}${def.side ? `  ⚠ 부작용: ${def.side}` : ''}`;
+  return `[${CATEGORY_NAME[def.category]}] ${def.name} — ${def.desc}${def.side ? `  ▲ 부작용: ${def.side}` : ''}`;
 }
