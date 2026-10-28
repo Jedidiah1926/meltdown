@@ -23,6 +23,21 @@ npm run build    # 타입 검사 + 배포용 빌드 (dist/)
 - 최초 1회: 저장소 **Settings → Pages → Build and deployment → Source**를 **GitHub Actions**로 설정
 - 주소: `https://<사용자>.github.io/meltdown/`
 
+## Windows 앱 (exe) 과 자동 업데이트
+
+- `v`로 시작하는 태그를 푸시하면 `.github/workflows/release.yml`이 Windows 설치 파일(`MELTDOWN Setup x.y.z.exe`)을 만들어 GitHub Release에 올린다.
+- 설치된 게임은 실행할 때마다 Release에서 새 버전을 확인한다. 새 버전이 있으면 백그라운드로 받은 뒤 "지금 재시작 / 나중에"를 묻는다. "나중에"를 고르면 게임을 끌 때 설치된다.
+- 서명하지 않은 설치 파일이라 처음 실행할 때 Windows 보안 경고가 뜬다 ("추가 정보 → 실행").
+
+새 버전 내기:
+
+```sh
+npm version patch        # 0.1.0 → 0.1.1, 커밋과 태그를 함께 만든다 (minor / major 도 가능)
+git push --follow-tags   # 태그가 올라가면 Release가 자동으로 만들어진다
+```
+
+로컬에서 데스크톱 앱으로 실행: `npm run app`
+
 ## 조작
 
 | 입력 | 동작 |
@@ -40,3 +55,4 @@ npm run build    # 타입 검사 + 배포용 빌드 (dist/)
 - `src/sim/` — 원자로 시뮬레이션과 한 판의 규칙 (화면과 분리된 순수 TypeScript)
 - `src/ui/` — PixiJS 화면 (벽면 콘솔, 책상, 오버레이)
 - `tests/` — Vitest 테스트와 밸런스 확인용 봇
+- `electron/` — 데스크톱 앱 진입점과 자동 업데이트

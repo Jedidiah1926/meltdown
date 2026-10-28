@@ -9,15 +9,49 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "app": "vite build && electron .",
+    "dist:win": "vite build && electron-builder --win --publish never"
   },
   "dependencies": {
-    "pixi-filters": "6.1.5",
-    "pixi.js": "8.22.0"
+    "electron-updater": "6.8.10"
   },
   "devDependencies": {
+    "electron": "44.9.3",
+    "electron-builder": "26.17.0",
+    "pixi-filters": "6.1.5",
+    "pixi.js": "8.22.0",
     "typescript": "5.9.3",
     "vite": "8.3.5",
     "vitest": "5.0.5"
+  },
+  "main": "electron/main.cjs",
+  "author": "Jedidiah1926",
+  "build": {
+    "appId": "io.github.jedidiah1926.meltdown",
+    "productName": "MELTDOWN",
+    "files": [
+      "dist/**",
+      "electron/**",
+      "package.json"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "Jedidiah1926",
+        "repo": "meltdown",
+        "releaseType": "release"
+      }
+    ]
   }
 }
