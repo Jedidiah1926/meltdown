@@ -283,7 +283,23 @@ Transparent background.
 
 ---
 
-## 3. 결말 일러스트 (선택)
+## 3. 연출
+
+### 3-1. 대피하는 운전원 실루엣 — `evac_walk_1.png` ~ `evac_walk_4.png`
+
+- 포기 결말에서 운전원이 책상 앞을 가로질러 오른쪽 출구로 걸어 나가는 장면에 쓴다.
+- 원본 크기: 각 **48×110**, 투명 배경, **뒷모습**(화면 안쪽을 등지고 걸어가는 모습이 아니라, 플레이어 앞을 지나 오른쪽으로 걷는 **옆모습**)
+- **걷기 4프레임**을 한 장에 가로로 나란히 생성한 뒤 잘라 쓴다. 발 위치(아래 끝)가 네 장 모두 같은 높이여야 한다.
+- 지금은 검은 사람 모양 임시 그래픽이 대신 나온다.
+
+```
+[공통 스타일 블록]
+A walk cycle of four frames side by side, evenly spaced, same size: the side-view silhouette of a nuclear plant operator
+in a work jumpsuit and a hard hat, walking to the right. Almost pure black silhouette (#0d0605) with only a thin dim red rim light on the edges.
+Feet at exactly the same baseline in every frame. Transparent background.
+```
+
+## 4. 결말 일러스트 (선택)
 
 - 원본 크기: 각 **640×360**, 불투명
 - 결말 연출에서 화면이 어두워진 뒤 떠오르는 그림. 프로스트펑크식 페이드 아웃.
@@ -302,7 +318,7 @@ A wide cinematic pixel art scene, aspect ratio 16:9: <그림 설명>.
 
 ---
 
-## 4. 체크리스트
+## 5. 체크리스트
 
 - [x] 벽면 배경으로 스타일 확정 (`public/art/wall_bg.png`, 게임에 적용됨)
 - [x] 위험도 게이지 판·바늘 (게임에 적용됨. 그림의 색 경계는 실제로 약 50%·81% 위치라서, 바늘 각도를 구간별로 맞춰 규칙의 40%·75%가 경계를 가리키게 함)
@@ -312,4 +328,5 @@ A wide cinematic pixel art scene, aspect ratio 16:9: <그림 설명>.
 - [ ] 책상 상판
 - [ ] 제어봉 레버, SCRAM, 펌프 다이얼, 터빈 휠, 포기 장치
 - [ ] 슬롯 2종, 모듈 카트리지 6종, 아이콘 13종
+- [ ] 대피 실루엣 걷기 4프레임 (지금은 임시 그래픽)
 - [ ] (선택) 결말 일러스트 4종
