@@ -8,6 +8,21 @@ import { C, WALL_H, W, label } from './theme';
 const GAUGE = { x: 170, y: 215, r: 120 };
 const GAUGE_MAX = 150;
 
+/** 게이지 판 아트(gauge_face.png)에서 측정한 값. 원본 픽셀 좌표, 각도는 화면 기준(y 아래) 도 단위 */
+const ART_FACE = { x: 20, y: 40, scale: 2, pivotX: 74.5, pivotY: 92 };
+const ART_NEEDLE_PIVOT = { x: 3, y: 59 };
+/** 위험도 → 아트 눈금 각도. 그림의 색 경계(초록/노랑, 노랑/빨강)가 규칙의 40%·75%에 오도록 구간별로 맞춘다 */
+const ART_STOPS: [number, number][] = [[0, -158], [40, -89], [75, -45.7], [100, -21], [GAUGE_MAX, 20]];
+
+function artAngle(risk: number): number {
+  const v = Math.max(0, Math.min(GAUGE_MAX, risk));
+  for (let i = 1; i < ART_STOPS.length; i++) {
+    const [r0, a0] = ART_STOPS[i - 1], [r1, a1] = ART_STOPS[i];
+    if (v <= r1) return (a0 + (v - r0) / (r1 - r0) * (a1 - a0)) * Math.PI / 180;
+  }
+  return ART_STOPS[ART_STOPS.length - 1][1] * Math.PI / 180;
+}
+
 /** 위험도 → 각도 (0% = 왼쪽 수평, 100% = 오른쪽 수평 = 눈금 끝, 150% = 오른쪽 아래로 40°) */
 function riskAngle(risk: number): number {
   const v = Math.max(0, Math.min(GAUGE_MAX, risk));
@@ -17,6 +32,9 @@ function riskAngle(risk: number): number {
 
 export class Wall extends Container {
   private needle = new Graphics();
+  private needleSprite: Sprite | null = null;
+  /** 게이지 아트가 들어오면 숨기는 임시 게이지 판 */
+  private facePlaceholder = new Container();
   private needleValue = 0;
   private gaugeText: Text;
   private crt = new Container();
@@ -60,10 +78,10 @@ export class Wall extends Container {
         .stroke({ width: v % 50 === 0 ? 3 : 1, color: 0x2a120d });
     }
     face.circle(GAUGE.x, GAUGE.y, 10).fill(0x2a120d);
-    this.addChild(face);
     const ttl = label('☢ 위험도', 16, 0x2a120d);
     ttl.position.set(GAUGE.x - ttl.width / 2, GAUGE.y + 22);
-    this.addChild(ttl);
+    this.facePlaceholder.addChild(face, ttl);
+    this.addChild(this.facePlaceholder);
     this.gaugeText = label('', 12, 0x5a2a1a);
     this.gaugeText.position.set(40, 268);
     this.addChild(this.needle, this.gaugeText);
@@ -115,10 +133,30 @@ export class Wall extends Container {
     this.placeholder.visible = false;
   }
 
+  /** 위험도 게이지 아트 적용 (docs/art-prompts.md 1-2, 1-3) */
+  useGauge(face: Texture, needle: Texture) {
+    const f = new Sprite(face);
+    f.position.set(ART_FACE.x, ART_FACE.y);
+    f.scale.set(ART_FACE.scale);
+    const n = new Sprite(needle);
+    n.anchor.set(ART_NEEDLE_PIVOT.x / needle.width, ART_NEEDLE_PIVOT.y / needle.height);
+    n.position.set(ART_FACE.x + ART_FACE.pivotX * ART_FACE.scale, ART_FACE.y + ART_FACE.pivotY * ART_FACE.scale);
+    n.scale.set(ART_FACE.scale);
+    this.addChildAt(f, this.getChildIndex(this.facePlaceholder));
+    this.addChildAt(n, this.getChildIndex(this.needle));
+    this.facePlaceholder.visible = false;
+    this.needle.visible = false;
+    this.needleSprite = n;
+    // 노심 한계 글자는 게이지 아래 벽으로 옮긴다 (판 테두리가 어두워서)
+    this.gaugeText.style.fill = C.amber;
+    this.gaugeText.position.set(30, 304);
+  }
+
   update(g: Game, dt: number, now: number) {
     // 바늘: 실제 값을 반 박자 늦게 따라가고 떨린다 (GDD 3.4)
     this.needleValue += (g.risk - this.needleValue) * Math.min(1, dt * 1.8);
     const jitter = Math.sin(now * 0.031) * 0.6 + Math.sin(now * 0.017) * 0.4 + (this.needleValue > 75 ? Math.sin(now * 0.09) * 1.5 : 0);
+    if (this.needleSprite) this.needleSprite.rotation = artAngle(this.needleValue + jitter) + Math.PI / 2;
     const a = riskAngle(this.needleValue + jitter);
     this.needle.clear()
       .moveTo(GAUGE.x, GAUGE.y)

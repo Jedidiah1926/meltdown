@@ -48,6 +48,9 @@ async function loadArt(name: string): Promise<Texture> {
   return texture;
 }
 loadArt('wall_bg.png').then((t) => wall.useBackground(t)).catch(() => console.warn('wall_bg.png 없음 — 임시 그래픽 사용'));
+Promise.all([loadArt('gauge_face.png'), loadArt('gauge_needle.png')])
+  .then(([face, needle]) => wall.useGauge(face, needle))
+  .catch(() => console.warn('게이지 아트 없음 — 임시 그래픽 사용'));
 
 function pickSupply(m: ModuleDef) {
   const empty = game.slots.indexOf(null);
